@@ -1,0 +1,9 @@
+<library path="rebot_arm_rs_hardware">
+  <class
+    name="rebot_arm_rs_hardware/RebotArmRsSystem"
+    type="rebot_arm_rs_hardware::RebotArmRsSystem"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>Native RobStride private-CAN SystemInterface for the six-axis B601-RS.</description>
+  </class>
+</library>
+

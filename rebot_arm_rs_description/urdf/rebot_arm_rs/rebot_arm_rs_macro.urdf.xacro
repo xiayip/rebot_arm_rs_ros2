@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="rebot_arm_rs_link" params="name mesh">
+    <link name="${name}">
+      <visual>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
+        </geometry>
+        <material name="rebot_green"><color rgba="0.30 0.72 0.38 1.0"/></material>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs">
+    <xacro:rebot_arm_rs_link name="base_link" mesh="base_link.STL"/>
+    <xacro:rebot_arm_rs_link name="link1" mesh="link1.STL"/>
+    <xacro:rebot_arm_rs_link name="link2" mesh="link2.STL"/>
+    <xacro:rebot_arm_rs_link name="link3" mesh="link3.STL"/>
+    <xacro:rebot_arm_rs_link name="link4" mesh="link4.STL"/>
+    <xacro:rebot_arm_rs_link name="link5" mesh="link5.STL"/>
+    <xacro:rebot_arm_rs_link name="link6" mesh="link6.STL"/>
+
+    <joint name="joint1" type="revolute">
+      <origin xyz="-0.00034283 -0.00098683 0.075" rpy="0 0 0"/>
+      <parent link="base_link"/><child link="link1"/><axis xyz="0 0 -1"/>
+      <limit lower="-2.53" upper="2.53" effort="36" velocity="1.0"/>
+    </joint>
+    <joint name="joint2" type="revolute">
+      <origin xyz="0.020343 0.027237 0.07" rpy="-1.5708 0 0"/>
+      <parent link="link1"/><child link="link2"/><axis xyz="0 0 1"/>
+      <limit lower="0.0" upper="2.96" effort="36" velocity="1.0"/>
+    </joint>
+    <joint name="joint3" type="revolute">
+      <origin xyz="-0.236 0 0" rpy="0 0 0"/>
+      <parent link="link2"/><child link="link3"/><axis xyz="0 0 -1"/>
+      <limit lower="0.0" upper="3.50" effort="36" velocity="1.0"/>
+    </joint>
+    <joint name="joint4" type="revolute">
+      <origin xyz="0.228 -0.072746 0.0045" rpy="0 0 0"/>
+      <parent link="link3"/><child link="link4"/><axis xyz="0 0 -1"/>
+      <limit lower="-1.39" upper="1.57" effort="14" velocity="1.0"/>
+    </joint>
+    <joint name="joint5" type="revolute">
+      <origin xyz="0.087 -0.048 -0.03075" rpy="-1.5708 0 0"/>
+      <parent link="link4"/><child link="link5"/><axis xyz="0 0 -1"/>
+      <limit lower="-1.57" upper="1.57" effort="14" velocity="1.0"/>
+    </joint>
+    <joint name="joint6" type="revolute">
+      <origin xyz="0.0365 0 0.048" rpy="0 1.5708 0"/>
+      <parent link="link5"/><child link="link6"/><axis xyz="0 0 -1"/>
+      <limit lower="-1.57" upper="1.57" effort="14" velocity="1.0"/>
+    </joint>
+
+    <link name="tool0"/>
+    <joint name="tool0_joint" type="fixed">
+      <origin xyz="0 0 0.16621" rpy="3.1416 -1.5708 0"/>
+      <parent link="link6"/><child link="tool0"/>
+    </joint>
+  </xacro:macro>
+</robot>
+

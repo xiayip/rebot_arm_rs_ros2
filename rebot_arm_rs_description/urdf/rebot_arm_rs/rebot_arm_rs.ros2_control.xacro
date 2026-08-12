@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="rebot_arm_rs_joint_interfaces" params="name motor_id model kp kd lower upper">
+    <joint name="${name}">
+      <param name="motor_id">${motor_id}</param>
+      <param name="model">${model}</param>
+      <param name="direction">1.0</param>
+      <param name="offset">0.0</param>
+      <param name="position_kp">${kp}</param>
+      <param name="velocity_kd">${kd}</param>
+      <param name="min_position">${lower}</param>
+      <param name="max_position">${upper}</param>
+      <command_interface name="position"/>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_ros2_control" params="name use_mock_hardware mock_sensor_commands can_interface auto_enable_on_activate">
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <xacro:if value="${use_mock_hardware}">
+          <plugin>mock_components/GenericSystem</plugin>
+          <param name="mock_sensor_commands">${mock_sensor_commands}</param>
+          <param name="calculate_dynamics">false</param>
+        </xacro:if>
+        <xacro:unless value="${use_mock_hardware}">
+          <plugin>rebot_arm_rs_hardware/RebotArmRsSystem</plugin>
+          <param name="can_interface">${can_interface}</param>
+          <param name="host_id">0xFD</param>
+          <param name="auto_enable_on_activate">${auto_enable_on_activate}</param>
+          <param name="require_all_motors">true</param>
+          <param name="disable_on_deactivate">true</param>
+          <param name="initial_read_timeout_ms">1200</param>
+          <param name="position_poll_divider">1</param>
+          <param name="max_command_step">0.02</param>
+        </xacro:unless>
+      </hardware>
+
+      <xacro:rebot_arm_rs_joint_interfaces name="joint1" motor_id="0x01" model="rs-06" kp="50.0" kd="3.0" lower="-2.53" upper="2.53"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint2" motor_id="0x02" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="2.96"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint3" motor_id="0x03" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="3.50"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.39" upper="1.57"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint5" motor_id="0x05" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57"/>
+    </ros2_control>
+  </xacro:macro>
+</robot>
+

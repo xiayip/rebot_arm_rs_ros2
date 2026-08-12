@@ -1,0 +1,30 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 200
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    rebot_arm_rs_forward_position_controller:
+      type: forward_command_controller/ForwardCommandController
+
+    rebot_arm_rs_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+rebot_arm_rs_forward_position_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    interface_name: position
+
+rebot_arm_rs_trajectory_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    command_interfaces: [position]
+    state_interfaces: [position, velocity]
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.02
+      goal_time: 1.0
+

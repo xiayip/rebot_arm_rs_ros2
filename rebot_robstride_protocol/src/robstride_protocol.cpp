@@ -76,9 +76,9 @@ void RobStrideProtocol::configure(
     device.offset =
         std::stod(required_parameter(configuration.parameters, "offset"));
     device.kp =
-        std::stod(required_parameter(configuration.parameters, "position_kp"));
+        std::stod(required_parameter(configuration.parameters, "mit_kp"));
     device.kd =
-        std::stod(required_parameter(configuration.parameters, "velocity_kd"));
+        std::stod(required_parameter(configuration.parameters, "mit_kd"));
     if (std::abs(std::abs(device.direction) - 1.0) > 1e-9) {
       throw std::invalid_argument(device.name + " direction must be +1 or -1");
     }

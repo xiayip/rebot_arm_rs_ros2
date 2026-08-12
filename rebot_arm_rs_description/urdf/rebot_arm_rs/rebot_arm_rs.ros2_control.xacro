@@ -8,8 +8,8 @@
       <param name="model">${model}</param>
       <param name="direction">1.0</param>
       <param name="offset">0.0</param>
-      <param name="position_kp">${kp}</param>
-      <param name="velocity_kd">${kd}</param>
+      <param name="mit_kp">${kp}</param>
+      <param name="mit_kd">${kd}</param>
       <param name="min_position">${lower}</param>
       <param name="max_position">${upper}</param>
       <command_interface name="position"/>

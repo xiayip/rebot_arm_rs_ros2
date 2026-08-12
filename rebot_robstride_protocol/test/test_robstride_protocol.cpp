@@ -85,9 +85,9 @@ TEST(RobStridePlugin, RejectsFramesForAnotherHostAndTracksInitialState) {
   device.name = "joint1";
   device.command_interfaces = {"position"};
   device.state_interfaces = {"position", "velocity", "effort"};
-  device.parameters = {{"motor_id", "1"},     {"model", "rs-06"},
-                       {"direction", "1"},    {"offset", "0"},
-                       {"position_kp", "50"}, {"velocity_kd", "3"}};
+  device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
+                       {"direction", "1"}, {"offset", "0"},
+                       {"mit_kp", "50"},   {"mit_kd", "3"}};
   protocol.configure(bus, {device});
 
   codec::Frame wrong_host;
@@ -120,9 +120,9 @@ TEST(RobStridePlugin, RejectsUnsupportedNamedInterfaces) {
   device.name = "joint1";
   device.command_interfaces = {"current"};
   device.state_interfaces = {"position"};
-  device.parameters = {{"motor_id", "1"},     {"model", "rs-06"},
-                       {"direction", "1"},    {"offset", "0"},
-                       {"position_kp", "50"}, {"velocity_kd", "3"}};
+  device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
+                       {"direction", "1"}, {"offset", "0"},
+                       {"mit_kp", "50"},   {"mit_kd", "3"}};
   EXPECT_THROW(protocol.configure({{"host_id", "0xFD"}}, {device}),
                std::invalid_argument);
 }
@@ -133,9 +133,9 @@ TEST(RobStridePlugin, DerivesVelocityOnlyFromMechanicalPositionSamples) {
   device.name = "joint1";
   device.command_interfaces = {"position"};
   device.state_interfaces = {"position", "velocity"};
-  device.parameters = {{"motor_id", "1"},     {"model", "rs-06"},
-                       {"direction", "1"},    {"offset", "0"},
-                       {"position_kp", "50"}, {"velocity_kd", "3"}};
+  device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
+                       {"direction", "1"}, {"offset", "0"},
+                       {"mit_kp", "50"},   {"mit_kd", "3"}};
   protocol.configure({{"host_id", "0xFD"}}, {device});
 
   const auto start = std::chrono::steady_clock::now();
@@ -185,9 +185,9 @@ TEST(RobStridePlugin, RejectsInvalidMechanicalPositionFeedback) {
   device.name = "joint1";
   device.command_interfaces = {"position"};
   device.state_interfaces = {"position", "velocity"};
-  device.parameters = {{"motor_id", "1"},     {"model", "rs-06"},
-                       {"direction", "1"},    {"offset", "0"},
-                       {"position_kp", "50"}, {"velocity_kd", "3"}};
+  device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
+                       {"direction", "1"}, {"offset", "0"},
+                       {"mit_kp", "50"},   {"mit_kd", "3"}};
   protocol.configure({{"host_id", "0xFD"}}, {device});
 
   const auto start = std::chrono::steady_clock::now();

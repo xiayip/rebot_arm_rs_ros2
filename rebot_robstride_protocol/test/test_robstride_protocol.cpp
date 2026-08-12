@@ -2,6 +2,7 @@
 
 #include <array>
 #include <chrono>
+#include <cmath>
 
 #include "rebot_robstride_protocol/robstride_codec.hpp"
 #include "rebot_robstride_protocol/robstride_protocol.hpp"
@@ -124,4 +125,92 @@ TEST(RobStridePlugin, RejectsUnsupportedNamedInterfaces) {
                        {"position_kp", "50"}, {"velocity_kd", "3"}};
   EXPECT_THROW(protocol.configure({{"host_id", "0xFD"}}, {device}),
                std::invalid_argument);
+}
+
+TEST(RobStridePlugin, DerivesVelocityOnlyFromMechanicalPositionSamples) {
+  rebot_robstride_protocol::RobStrideProtocol protocol;
+  shared_can_interface::v1::DeviceConfiguration device;
+  device.name = "joint1";
+  device.command_interfaces = {"position"};
+  device.state_interfaces = {"position", "velocity"};
+  device.parameters = {{"motor_id", "1"},     {"model", "rs-06"},
+                       {"direction", "1"},    {"offset", "0"},
+                       {"position_kp", "50"}, {"velocity_kd", "3"}};
+  protocol.configure({{"host_id", "0xFD"}}, {device});
+
+  const auto start = std::chrono::steady_clock::now();
+  codec::Frame position_reply;
+  position_reply.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kReadParameter, 1, 0xFD);
+  position_reply.data = {0x19, 0x70, 0, 0, 0, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(position_reply, start));
+
+  codec::Frame status_frame;
+  status_frame.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kOperationStatus, 1, 0xFD);
+  status_frame.data = {0x7F, 0xFF, 0x90, 0x00, 0x7F, 0xFF, 0x00, 0xFA};
+  const auto decoded_status =
+      codec::decode_status(status_frame, codec::limits_for_model("rs-06"));
+  ASSERT_TRUE(decoded_status.has_value());
+  ASSERT_GT(std::abs(decoded_status->velocity), 1.0F);
+  ASSERT_TRUE(protocol.process_frame(status_frame,
+                                     start + std::chrono::milliseconds(10)));
+
+  double velocity = 0.0;
+  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_DOUBLE_EQ(velocity, 0.0);
+
+  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x00, 0x3F};
+  ASSERT_TRUE(protocol.process_frame(position_reply,
+                                     start + std::chrono::milliseconds(200)));
+  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_NEAR(velocity, 2.5, 1e-9);
+
+  status_frame.data[2] = 0xF0;
+  ASSERT_TRUE(protocol.process_frame(status_frame,
+                                     start + std::chrono::milliseconds(210)));
+  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_NEAR(velocity, 2.5, 1e-9);
+
+  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x80, 0x3F};
+  ASSERT_TRUE(protocol.process_frame(position_reply,
+                                     start + std::chrono::milliseconds(400)));
+  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_NEAR(velocity, 2.5, 1e-9);
+}
+
+TEST(RobStridePlugin, RejectsInvalidMechanicalPositionFeedback) {
+  rebot_robstride_protocol::RobStrideProtocol protocol;
+  shared_can_interface::v1::DeviceConfiguration device;
+  device.name = "joint1";
+  device.command_interfaces = {"position"};
+  device.state_interfaces = {"position", "velocity"};
+  device.parameters = {{"motor_id", "1"},     {"model", "rs-06"},
+                       {"direction", "1"},    {"offset", "0"},
+                       {"position_kp", "50"}, {"velocity_kd", "3"}};
+  protocol.configure({{"host_id", "0xFD"}}, {device});
+
+  const auto start = std::chrono::steady_clock::now();
+  codec::Frame position_reply;
+  position_reply.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kReadParameter, 1, 0xFD);
+  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x80, 0x7F};
+  EXPECT_FALSE(protocol.process_frame(position_reply, start));
+  EXPECT_FALSE(protocol.initial_state_ready());
+
+  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0xA0, 0x41};
+  EXPECT_FALSE(protocol.process_frame(position_reply, start));
+  EXPECT_FALSE(protocol.initial_state_ready());
+
+  position_reply.data = {0x19, 0x70, 0, 0, 0, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(position_reply, start));
+  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x20, 0x41};
+  EXPECT_FALSE(protocol.process_frame(position_reply,
+                                      start + std::chrono::milliseconds(1)));
+  double position = 1.0;
+  double velocity = 1.0;
+  ASSERT_TRUE(protocol.get_state("joint1", "position", position));
+  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_DOUBLE_EQ(position, 0.0);
+  EXPECT_DOUBLE_EQ(velocity, 0.0);
 }

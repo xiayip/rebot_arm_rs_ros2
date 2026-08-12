@@ -99,7 +99,8 @@ void RobStrideProtocol::reset_state() {
     device.status_received = false;
     device.mechanical_position_received = false;
     device.faulted = false;
-    device.last_position_time = {};
+    device.last_mechanical_position = 0.0;
+    device.last_mechanical_position_time = {};
   }
 }
 
@@ -132,22 +133,31 @@ std::vector<std::string> RobStrideProtocol::missing_initial_states() const {
   return names;
 }
 
-void RobStrideProtocol::update_position(
+bool RobStrideProtocol::update_mechanical_position(
     Device &device, double motor_position,
     std::chrono::steady_clock::time_point timestamp) {
   const double next_position =
       device.direction * motor_position + device.offset;
-  if (device.position_valid) {
-    const double seconds =
-        std::chrono::duration<double>(timestamp - device.last_position_time)
-            .count();
+  if (device.mechanical_position_received &&
+      timestamp > device.last_mechanical_position_time) {
+    const double seconds = std::chrono::duration<double>(
+                               timestamp - device.last_mechanical_position_time)
+                               .count();
     if (seconds > 1e-6) {
-      device.velocity = (next_position - device.position) / seconds;
+      const double measured_velocity =
+          (next_position - device.last_mechanical_position) / seconds;
+      if (std::abs(measured_velocity) <= device.limits.velocity_max) {
+        device.velocity = measured_velocity;
+      } else {
+        return false;
+      }
     }
   }
   device.position = next_position;
   device.position_valid = true;
-  device.last_position_time = timestamp;
+  device.last_mechanical_position = next_position;
+  device.last_mechanical_position_time = timestamp;
+  return true;
 }
 
 bool RobStrideProtocol::process_frame(
@@ -167,7 +177,14 @@ bool RobStrideProtocol::process_frame(
       return false;
     }
     if (parameter->parameter_id == kMechanicalPosition) {
-      update_position(*device, codec::parameter_as_f32(*parameter), timestamp);
+      const double motor_position = codec::parameter_as_f32(*parameter);
+      if (!std::isfinite(motor_position) ||
+          std::abs(motor_position) > device->limits.position_max) {
+        return false;
+      }
+      if (!update_mechanical_position(*device, motor_position, timestamp)) {
+        return false;
+      }
       if (!std::isfinite(device->command_position)) {
         device->command_position = device->position;
       }
@@ -188,7 +205,6 @@ bool RobStrideProtocol::process_frame(
   if (!status) {
     return false;
   }
-  update_position(*device, status->position, timestamp);
   device->effort = device->direction * status->torque;
   device->temperature_c = status->temperature_c;
   device->status_received = true;

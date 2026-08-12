@@ -55,7 +55,8 @@ private:
     double effort{0.0};
     double temperature_c{0.0};
     double command_position{std::numeric_limits<double>::quiet_NaN()};
-    std::chrono::steady_clock::time_point last_position_time{};
+    double last_mechanical_position{0.0};
+    std::chrono::steady_clock::time_point last_mechanical_position_time{};
     bool position_valid{false};
     bool status_received{false};
     bool mechanical_position_received{false};
@@ -65,8 +66,9 @@ private:
   Device *find_by_motor_id(std::uint8_t motor_id);
   Device *find_by_name(const std::string &name);
   const Device *find_by_name(const std::string &name) const;
-  void update_position(Device &device, double motor_position,
-                       std::chrono::steady_clock::time_point timestamp);
+  bool
+  update_mechanical_position(Device &device, double motor_position,
+                             std::chrono::steady_clock::time_point timestamp);
 
   std::uint8_t host_id_{0xFD};
   std::size_t next_poll_device_{0};

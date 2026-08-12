@@ -47,7 +47,9 @@ void RobStrideProtocol::configure(
   devices_.reserve(devices.size());
   for (const auto &configuration : devices) {
     for (const auto &interface_name : configuration.command_interfaces) {
-      if (interface_name != "position") {
+      if (interface_name != "position" && interface_name != "velocity" &&
+          interface_name != "kp" && interface_name != "kd" &&
+          interface_name != "t_ff") {
         throw std::invalid_argument(
             configuration.name +
             " has unsupported RobStride command interface: " + interface_name);
@@ -75,12 +77,22 @@ void RobStrideProtocol::configure(
         std::stod(required_parameter(configuration.parameters, "direction"));
     device.offset =
         std::stod(required_parameter(configuration.parameters, "offset"));
-    device.kp =
+    device.mit_kp =
         std::stod(required_parameter(configuration.parameters, "mit_kp"));
-    device.kd =
+    device.mit_kd =
         std::stod(required_parameter(configuration.parameters, "mit_kd"));
     if (std::abs(std::abs(device.direction) - 1.0) > 1e-9) {
       throw std::invalid_argument(device.name + " direction must be +1 or -1");
+    }
+    if (!std::isfinite(device.mit_kp) || device.mit_kp < 0.0 ||
+        device.mit_kp > device.limits.kp_max) {
+      throw std::invalid_argument(device.name +
+                                  " mit_kp is outside model limits");
+    }
+    if (!std::isfinite(device.mit_kd) || device.mit_kd < 0.0 ||
+        device.mit_kd > device.limits.kd_max) {
+      throw std::invalid_argument(device.name +
+                                  " mit_kd is outside model limits");
     }
     devices_.push_back(device);
   }
@@ -95,6 +107,10 @@ void RobStrideProtocol::reset_state() {
     device.effort = 0.0;
     device.temperature_c = 0.0;
     device.command_position = std::numeric_limits<double>::quiet_NaN();
+    device.command_velocity = 0.0;
+    device.command_t_ff = 0.0;
+    device.command_kp = device.mit_kp;
+    device.command_kd = device.mit_kd;
     device.position_valid = false;
     device.status_received = false;
     device.mechanical_position_received = false;
@@ -245,7 +261,8 @@ RobStrideProtocol::enable_sequence() const {
         device.direction * (device.position - device.offset);
     hold_position.frames.push_back(codec::make_mit_command(
         device.motor_id, device.limits, static_cast<float>(motor_target), 0.0F,
-        static_cast<float>(device.kp), static_cast<float>(device.kd), 0.0F));
+        static_cast<float>(device.command_kp),
+        static_cast<float>(device.command_kd), 0.0F));
   }
   return {std::move(set_mode), std::move(enable), std::move(hold_position)};
 }
@@ -264,12 +281,30 @@ bool RobStrideProtocol::set_command(const std::string &device_name,
                                     const std::string &interface_name,
                                     double value) {
   auto *device = find_by_name(device_name);
-  if (device == nullptr || interface_name != "position" ||
-      !std::isfinite(value)) {
+  if (device == nullptr || !std::isfinite(value)) {
     return false;
   }
-  device->command_position = value;
-  return true;
+  if (interface_name == "position") {
+    device->command_position = value;
+    return true;
+  }
+  if (interface_name == "velocity") {
+    device->command_velocity = value;
+    return true;
+  }
+  if (interface_name == "t_ff") {
+    device->command_t_ff = value;
+    return true;
+  }
+  if (interface_name == "kp") {
+    device->command_kp = value;
+    return true;
+  }
+  if (interface_name == "kd") {
+    device->command_kd = value;
+    return true;
+  }
+  return false;
 }
 
 std::size_t RobStrideProtocol::command_frame_capacity() const noexcept {
@@ -288,9 +323,13 @@ void RobStrideProtocol::command_frames(
     }
     const double motor_target =
         device.direction * (device.command_position - device.offset);
+    const double motor_velocity = device.direction * device.command_velocity;
+    const double motor_t_ff = device.direction * device.command_t_ff;
     output.push_back(codec::make_mit_command(
-        device.motor_id, device.limits, static_cast<float>(motor_target), 0.0F,
-        static_cast<float>(device.kp), static_cast<float>(device.kd), 0.0F));
+        device.motor_id, device.limits, static_cast<float>(motor_target),
+        static_cast<float>(motor_velocity),
+        static_cast<float>(device.command_kp),
+        static_cast<float>(device.command_kd), static_cast<float>(motor_t_ff)));
   }
 }
 

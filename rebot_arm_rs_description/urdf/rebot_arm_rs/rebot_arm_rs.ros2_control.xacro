@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="rebot_arm_rs_joint_interfaces" params="name motor_id model kp kd lower upper">
+  <xacro:macro name="rebot_arm_rs_joint_interfaces" params="name motor_id model kp kd lower upper velocity_max torque_max kp_max kd_max">
     <joint name="${name}">
       <param name="protocol_plugin">rebot_robstride_protocol/RobStrideProtocol</param>
       <param name="protocol_instance">arm_robstride</param>
@@ -12,7 +12,30 @@
       <param name="mit_kd">${kd}</param>
       <param name="min_position">${lower}</param>
       <param name="max_position">${upper}</param>
-      <command_interface name="position"/>
+      <command_interface name="position">
+        <param name="min">${lower}</param>
+        <param name="max">${upper}</param>
+      </command_interface>
+      <command_interface name="velocity">
+        <param name="min">-${velocity_max}</param>
+        <param name="max">${velocity_max}</param>
+        <param name="initial_value">0.0</param>
+      </command_interface>
+      <command_interface name="kp">
+        <param name="minimum">0.0</param>
+        <param name="maximum">${kp_max}</param>
+        <param name="initial_value">${kp}</param>
+      </command_interface>
+      <command_interface name="kd">
+        <param name="minimum">0.0</param>
+        <param name="maximum">${kd_max}</param>
+        <param name="initial_value">${kd}</param>
+      </command_interface>
+      <command_interface name="t_ff">
+        <param name="minimum">-${torque_max}</param>
+        <param name="maximum">${torque_max}</param>
+        <param name="initial_value">0.0</param>
+      </command_interface>
       <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
       <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
       <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
@@ -41,12 +64,12 @@
         </xacro:unless>
       </hardware>
 
-      <xacro:rebot_arm_rs_joint_interfaces name="joint1" motor_id="0x01" model="rs-06" kp="50.0" kd="3.0" lower="-2.53" upper="2.53"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint2" motor_id="0x02" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="2.96"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint3" motor_id="0x03" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="3.50"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.39" upper="1.57"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint5" motor_id="0x05" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint1" motor_id="0x01" model="rs-06" kp="50.0" kd="3.0" lower="-2.53" upper="2.53" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint2" motor_id="0x02" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="2.96" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint3" motor_id="0x03" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="3.50" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.39" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint5" motor_id="0x05" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
     </ros2_control>
   </xacro:macro>
 </robot>

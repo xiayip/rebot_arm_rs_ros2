@@ -83,7 +83,7 @@ TEST(RobStridePlugin, RejectsFramesForAnotherHostAndTracksInitialState) {
   shared_can_interface::v1::ParameterMap bus{{"host_id", "0xFD"}};
   shared_can_interface::v1::DeviceConfiguration device;
   device.name = "joint1";
-  device.command_interfaces = {"position"};
+  device.command_interfaces = {"position", "velocity", "kp", "kd", "t_ff"};
   device.state_interfaces = {"position", "velocity", "effort"};
   device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
                        {"direction", "1"}, {"offset", "0"},
@@ -107,11 +107,45 @@ TEST(RobStridePlugin, RejectsFramesForAnotherHostAndTracksInitialState) {
   EXPECT_TRUE(protocol.get_state("joint1", "position", position));
   EXPECT_DOUBLE_EQ(position, 0.0);
   EXPECT_TRUE(protocol.set_command("joint1", "position", 0.25));
+  EXPECT_TRUE(protocol.set_command("joint1", "velocity", 1.5));
+  EXPECT_TRUE(protocol.set_command("joint1", "t_ff", 2.0));
+  EXPECT_TRUE(protocol.set_command("joint1", "kp", 60.0));
+  EXPECT_TRUE(protocol.set_command("joint1", "kd", 4.0));
   EXPECT_FALSE(protocol.set_command("joint1", "current", 0.25));
   std::vector<shared_can_interface::v1::CanFrame> commands;
   protocol.command_frames(commands);
-  EXPECT_EQ(commands.size(), 1U);
+  ASSERT_EQ(commands.size(), 1U);
+  const auto expected = codec::make_mit_command(
+      1, codec::limits_for_model("rs-06"), 0.25F, 1.5F, 60.0F, 4.0F, 2.0F);
+  EXPECT_EQ(commands.front().arbitration_id, expected.arbitration_id);
+  EXPECT_EQ(commands.front().data, expected.data);
   EXPECT_EQ(protocol.command_frame_capacity(), 1U);
+}
+
+TEST(RobStridePlugin, AppliesJointDirectionToMitMotionAndFeedForward) {
+  rebot_robstride_protocol::RobStrideProtocol protocol;
+  shared_can_interface::v1::DeviceConfiguration device;
+  device.name = "joint1";
+  device.command_interfaces = {"position", "velocity", "kp", "kd", "t_ff"};
+  device.state_interfaces = {"position"};
+  device.parameters = {{"motor_id", "1"},   {"model", "rs-06"},
+                       {"direction", "-1"}, {"offset", "0.1"},
+                       {"mit_kp", "50"},    {"mit_kd", "3"}};
+  protocol.configure({{"host_id", "0xFD"}}, {device});
+
+  ASSERT_TRUE(protocol.set_command("joint1", "position", 0.25));
+  ASSERT_TRUE(protocol.set_command("joint1", "velocity", 1.5));
+  ASSERT_TRUE(protocol.set_command("joint1", "t_ff", 2.0));
+  ASSERT_TRUE(protocol.set_command("joint1", "kp", 60.0));
+  ASSERT_TRUE(protocol.set_command("joint1", "kd", 4.0));
+
+  std::vector<shared_can_interface::v1::CanFrame> commands;
+  protocol.command_frames(commands);
+  ASSERT_EQ(commands.size(), 1U);
+  const auto expected = codec::make_mit_command(
+      1, codec::limits_for_model("rs-06"), -0.15F, -1.5F, 60.0F, 4.0F, -2.0F);
+  EXPECT_EQ(commands.front().arbitration_id, expected.arbitration_id);
+  EXPECT_EQ(commands.front().data, expected.data);
 }
 
 TEST(RobStridePlugin, RejectsUnsupportedNamedInterfaces) {

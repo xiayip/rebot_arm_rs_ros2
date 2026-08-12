@@ -32,8 +32,13 @@ adding another motor, gripper, hand, or sensor protocol.
   activation.
 - `auto_enable_on_activate` defaults to `true`; after all six initial positions are received, the
   hardware enables every configured motor and holds the measured startup positions.
-- The trajectory controller is spawned inactive by the real-hardware launch file.
-- Position commands are clamped to per-joint limits and to a configurable maximum step.
+- The trajectory controller is spawned active by default. Pass
+  `activate_trajectory_controller:=false` to load and configure it without claiming `position`.
+- Each joint exports the complete MIT command tuple as `position`, `velocity`, `kp`, `kd`, and
+  `t_ff`. The trajectory controller claims only `position`; the remaining interfaces retain their
+  configured startup values until a future MIT controller claims them.
+- All MIT commands are clamped to the model-specific limits. Position is additionally constrained
+  to the joint limits and to a configurable maximum step.
 - J1-J3 are configured as RS-06, J4-J6 as RS-00, all with host ID `0xFD`.
 
 Pass `auto_enable_on_activate:=false` when a read-only diagnostic session is required.
@@ -59,13 +64,13 @@ prevents package discovery from scanning unrelated Python sources.
 # No physical hardware: validates the description and controller stack.
 ros2 launch rebot_arm_rs_bringup mock.launch.py
 
-# Physical CAN bus; all six motors enable and hold their startup positions.
-# The trajectory controller remains inactive.
+# Physical CAN bus; all six motors enable and the trajectory controller becomes active.
 ros2 launch rebot_arm_rs_bringup real_world.launch.py can_interface:=can1
 
-# Optional read-only diagnostic startup.
+# Optional read-only diagnostic startup with the trajectory controller inactive.
 ros2 launch rebot_arm_rs_bringup real_world.launch.py \
-  can_interface:=can1 auto_enable_on_activate:=false
+  can_interface:=can1 auto_enable_on_activate:=false \
+  activate_trajectory_controller:=false
 ```
 
 ## Source references

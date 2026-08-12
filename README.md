@@ -26,14 +26,17 @@ The ROS 2 workspace must also contain the `shared_can_hardware` repository. It p
 See that repository's README for the shared-bus architecture, plugin contract, and instructions for
 adding another motor, gripper, hand, or sensor protocol.
 
-## Safety defaults
+## Hardware startup behavior
 
 - The generic hardware plugin opens the CAN bus once and reads all configured device states during
   activation.
-- `auto_enable_on_activate` defaults to `false`; no enable or motion command is sent in this mode.
+- `auto_enable_on_activate` defaults to `true`; after all six initial positions are received, the
+  hardware enables every configured motor and holds the measured startup positions.
 - The trajectory controller is spawned inactive by the real-hardware launch file.
 - Position commands are clamped to per-joint limits and to a configurable maximum step.
 - J1-J3 are configured as RS-06, J4-J6 as RS-00, all with host ID `0xFD`.
+
+Pass `auto_enable_on_activate:=false` when a read-only diagnostic session is required.
 
 MotorBridge Gateway and this hardware plugin must not control the same CAN bus at the same time.
 
@@ -50,18 +53,20 @@ source install/setup.bash
 Run `colcon` from the ROS 2 workspace root rather than from one of its parent directories; this
 prevents package discovery from scanning unrelated Python sources.
 
-## Start safely
+## Start
 
 ```bash
 # No physical hardware: validates the description and controller stack.
 ros2 launch rebot_arm_rs_bringup mock.launch.py
 
-# Physical CAN bus, read-only activation; trajectory controller stays inactive.
+# Physical CAN bus; all six motors enable and hold their startup positions.
+# The trajectory controller remains inactive.
 ros2 launch rebot_arm_rs_bringup real_world.launch.py can_interface:=can1
-```
 
-Enabling real motors is intentionally not part of the initial smoke test. It requires an explicit
-`auto_enable_on_activate:=true` launch argument after the read-only path has passed.
+# Optional read-only diagnostic startup.
+ros2 launch rebot_arm_rs_bringup real_world.launch.py \
+  can_interface:=can1 auto_enable_on_activate:=false
+```
 
 ## Source references
 

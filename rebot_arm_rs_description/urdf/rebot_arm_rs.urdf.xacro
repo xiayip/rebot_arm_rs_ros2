@@ -3,7 +3,7 @@
   <xacro:arg name="use_mock_hardware" default="false"/>
   <xacro:arg name="mock_sensor_commands" default="false"/>
   <xacro:arg name="can_interface" default="can1"/>
-  <xacro:arg name="auto_enable_on_activate" default="false"/>
+  <xacro:arg name="auto_enable_on_activate" default="true"/>
 
   <xacro:include filename="$(find rebot_arm_rs_description)/urdf/rebot_arm_rs/rebot_arm_rs_macro.urdf.xacro"/>
   <xacro:include filename="$(find rebot_arm_rs_description)/urdf/rebot_arm_rs/rebot_arm_rs.ros2_control.xacro"/>
@@ -16,4 +16,3 @@
     can_interface="$(arg can_interface)"
     auto_enable_on_activate="$(arg auto_enable_on_activate)"/>
 </robot>
-

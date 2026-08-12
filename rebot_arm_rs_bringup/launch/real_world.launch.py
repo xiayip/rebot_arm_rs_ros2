@@ -11,7 +11,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument("can_interface", default_value="can1"),
-            DeclareLaunchArgument("auto_enable_on_activate", default_value="false"),
+            DeclareLaunchArgument("auto_enable_on_activate", default_value="true"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution(
@@ -27,4 +27,3 @@ def generate_launch_description():
             ),
         ]
     )
-

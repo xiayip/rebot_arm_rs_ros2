@@ -2,9 +2,10 @@
 
 Native ROS 2 control stack for the six-axis Seeed reBot Arm B601-RS.
 
-The hardware plugin talks directly to RobStride RS motors over Linux SocketCAN. It does not depend
-on MotorBridge at runtime; MotorBridge is retained as an independent protocol oracle during driver
-development and hardware validation.
+The driver uses the reusable `shared_can_hardware` stack for ros2_control and SocketCAN, with a
+RobStride protocol plugin provided by this repository. It does not depend on MotorBridge at
+runtime; MotorBridge is retained as an independent protocol oracle during driver development and
+hardware validation.
 
 ## Packages
 
@@ -12,12 +13,23 @@ development and hardware validation.
 | --- | --- |
 | `rebot_arm_rs` | Aggregate package |
 | `rebot_arm_rs_description` | Six-axis URDF/Xacro and ros2_control description |
-| `rebot_arm_rs_hardware` | RobStride protocol, SocketCAN transport, and SystemInterface plugin |
+| `rebot_robstride_protocol` | RobStride private-CAN codec and protocol plugin |
 | `rebot_arm_rs_bringup` | Controller configuration and launch files |
+
+## Dependency
+
+The ROS 2 workspace must also contain the `shared_can_hardware` repository. It provides:
+
+- `shared_can_interface`: the versioned transport/protocol ABI used by the RobStride plugin.
+- `shared_can_ros2`: the generic ros2_control bus manager and SocketCAN transport.
+
+See that repository's README for the shared-bus architecture, plugin contract, and instructions for
+adding another motor, gripper, hand, or sensor protocol.
 
 ## Safety defaults
 
-- The real hardware plugin opens the CAN bus and reads all six zeroed positions during activation.
+- The generic hardware plugin opens the CAN bus once and reads all configured device states during
+  activation.
 - `auto_enable_on_activate` defaults to `false`; no enable or motion command is sent in this mode.
 - The trajectory controller is spawned inactive by the real-hardware launch file.
 - Position commands are clamped to per-joint limits and to a configurable maximum step.
@@ -29,13 +41,14 @@ MotorBridge Gateway and this hardware plugin must not control the same CAN bus a
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-cd /workspaces/zephyr-dev/zephyr_ws
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src --rosdistro jazzy -r -y
 colcon build --symlink-install --packages-up-to rebot_arm_rs
 source install/setup.bash
 ```
 
-Run `colcon` from `zephyr_ws`, not from `/workspaces/zephyr-dev`; the latter also contains Miniforge
-and makes package discovery scan unrelated Python sources.
+Run `colcon` from the ROS 2 workspace root rather than from one of its parent directories; this
+prevents package discovery from scanning unrelated Python sources.
 
 ## Start safely
 

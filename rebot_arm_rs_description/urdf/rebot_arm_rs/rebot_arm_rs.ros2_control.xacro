@@ -2,6 +2,8 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:macro name="rebot_arm_rs_joint_interfaces" params="name motor_id model kp kd lower upper">
     <joint name="${name}">
+      <param name="protocol_plugin">rebot_robstride_protocol/RobStrideProtocol</param>
+      <param name="protocol_instance">arm_robstride</param>
       <param name="motor_id">${motor_id}</param>
       <param name="model">${model}</param>
       <param name="direction">1.0</param>
@@ -26,14 +28,15 @@
           <param name="calculate_dynamics">false</param>
         </xacro:if>
         <xacro:unless value="${use_mock_hardware}">
-          <plugin>rebot_arm_rs_hardware/RebotArmRsSystem</plugin>
+          <plugin>shared_can_ros2/CanSystem</plugin>
+          <param name="transport_plugin">shared_can_ros2/SocketCanTransport</param>
           <param name="can_interface">${can_interface}</param>
           <param name="host_id">0xFD</param>
           <param name="auto_enable_on_activate">${auto_enable_on_activate}</param>
-          <param name="require_all_motors">true</param>
+          <param name="require_all_devices">true</param>
           <param name="disable_on_deactivate">true</param>
           <param name="initial_read_timeout_ms">1200</param>
-          <param name="position_poll_divider">1</param>
+          <param name="poll_divider">1</param>
           <param name="max_command_step">0.02</param>
         </xacro:unless>
       </hardware>
@@ -47,4 +50,3 @@
     </ros2_control>
   </xacro:macro>
 </robot>
-

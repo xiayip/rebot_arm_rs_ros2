@@ -11,7 +11,9 @@
 
   <exec_depend>rebot_arm_rs_bringup</exec_depend>
   <exec_depend>rebot_arm_rs_description</exec_depend>
-  <exec_depend>rebot_arm_rs_hardware</exec_depend>
+  <exec_depend>rebot_robstride_protocol</exec_depend>
+  <exec_depend>shared_can_interface</exec_depend>
+  <exec_depend>shared_can_ros2</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

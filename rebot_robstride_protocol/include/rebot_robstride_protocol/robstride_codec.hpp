@@ -5,7 +5,11 @@
 #include <optional>
 #include <string_view>
 
-namespace rebot_arm_rs_hardware::robstride {
+#include "shared_can_interface/can_frame.hpp"
+
+namespace rebot_robstride_protocol::codec {
+
+using Frame = shared_can_interface::v1::CanFrame;
 
 enum class CommunicationType : std::uint8_t {
   kGetDeviceId = 0,
@@ -21,13 +25,6 @@ enum class CommunicationType : std::uint8_t {
   kSaveParameters = 22,
   kActiveReport = 24,
   kSetProtocol = 25,
-};
-
-struct Frame {
-  std::uint32_t arbitration_id{0};
-  std::array<std::uint8_t, 8> data{};
-  std::uint8_t dlc{8};
-  bool extended{true};
 };
 
 struct ExtendedId {
@@ -65,24 +62,28 @@ struct ParameterResponse {
   std::array<std::uint8_t, 4> raw_value{};
 };
 
-std::uint32_t build_extended_id(CommunicationType type, std::uint16_t extra_data, std::uint8_t node_id);
+std::uint32_t build_extended_id(CommunicationType type,
+                                std::uint16_t extra_data, std::uint8_t node_id);
 ExtendedId parse_extended_id(std::uint32_t arbitration_id);
 MotorLimits limits_for_model(std::string_view model);
 
 Frame make_ping(std::uint8_t motor_id, std::uint8_t host_id);
 Frame make_enable(std::uint8_t motor_id, std::uint8_t host_id);
-Frame make_disable(std::uint8_t motor_id, std::uint8_t host_id, bool clear_error = false);
-Frame make_read_parameter(std::uint8_t motor_id, std::uint8_t host_id, std::uint16_t parameter_id);
+Frame make_disable(std::uint8_t motor_id, std::uint8_t host_id,
+                   bool clear_error = false);
+Frame make_read_parameter(std::uint8_t motor_id, std::uint8_t host_id,
+                          std::uint16_t parameter_id);
 Frame make_write_parameter_i8(std::uint8_t motor_id, std::uint8_t host_id,
                               std::uint16_t parameter_id, std::int8_t value);
 Frame make_write_parameter_f32(std::uint8_t motor_id, std::uint8_t host_id,
                                std::uint16_t parameter_id, float value);
-Frame make_mit_command(std::uint8_t motor_id, const MotorLimits &limits, float position,
-                       float velocity, float kp, float kd, float torque);
+Frame make_mit_command(std::uint8_t motor_id, const MotorLimits &limits,
+                       float position, float velocity, float kp, float kd,
+                       float torque);
 
-std::optional<Status> decode_status(const Frame &frame, const MotorLimits &limits);
+std::optional<Status> decode_status(const Frame &frame,
+                                    const MotorLimits &limits);
 std::optional<ParameterResponse> decode_parameter_response(const Frame &frame);
 float parameter_as_f32(const ParameterResponse &response);
 
-}  // namespace rebot_arm_rs_hardware::robstride
-
+} // namespace rebot_robstride_protocol::codec

@@ -1,0 +1,8 @@
+<library path="rebot_robstride_protocol">
+  <class
+    name="rebot_robstride_protocol/RobStrideProtocol"
+    type="rebot_robstride_protocol::RobStrideProtocol"
+    base_class_type="shared_can_interface::v1::ProtocolInterface">
+    <description>RobStride RS private extended-CAN protocol for position-controlled actuators.</description>
+  </class>
+</library>

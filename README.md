@@ -16,6 +16,10 @@ hardware validation.
 | `rebot_robstride_protocol` | RobStride private-CAN codec and protocol plugin |
 | `rebot_arm_rs_bringup` | Controller configuration and launch files |
 
+The six-axis URDF inertial data and aggregate meshes are synchronized from Seeed Studio's official
+RS CAD export. See `rebot_arm_rs_description/urdf/UPSTREAM.md` for the pinned upstream commit,
+checksums, and the no-gripper adaptation policy.
+
 ## Dependency
 
 The ROS 2 workspace must also contain the `shared_can_hardware` repository. It provides:

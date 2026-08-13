@@ -1,7 +1,12 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="rebot_arm_rs_link" params="name mesh">
+  <xacro:macro name="rebot_arm_rs_link" params="name mesh com mass ixx ixy ixz iyy iyz izz">
     <link name="${name}">
+      <inertial>
+        <origin xyz="${com}" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}"/>
+      </inertial>
       <visual>
         <geometry>
           <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
@@ -17,13 +22,53 @@
   </xacro:macro>
 
   <xacro:macro name="rebot_arm_rs">
-    <xacro:rebot_arm_rs_link name="base_link" mesh="base_link.STL"/>
-    <xacro:rebot_arm_rs_link name="link1" mesh="link1.STL"/>
-    <xacro:rebot_arm_rs_link name="link2" mesh="link2.STL"/>
-    <xacro:rebot_arm_rs_link name="link3" mesh="link3.STL"/>
-    <xacro:rebot_arm_rs_link name="link4" mesh="link4.STL"/>
-    <xacro:rebot_arm_rs_link name="link5" mesh="link5.STL"/>
-    <xacro:rebot_arm_rs_link name="link6" mesh="link6.STL"/>
+    <!--
+      Inertial data is synchronized from Seeed-Projects/reBotArm_control_py,
+      urdf/00-arm-rs_asm-v3/urdf/00-arm-rs_asm-v3.urdf at commit edf9279.
+      Only the six-axis arm is included; the upstream gripper is intentionally omitted.
+    -->
+    <xacro:rebot_arm_rs_link
+      name="base_link" mesh="base_link.STL"
+      com="2.87641888266442E-06 -0.000122302488725115 0.0243376121934547"
+      mass="1.1774"
+      ixx="0.00133040" ixy="0.00000001" ixz="0.00000000"
+      iyy="0.00213119" iyz="0.00000000" izz="0.00275877"/>
+    <xacro:rebot_arm_rs_link
+      name="link1" mesh="link1.STL"
+      com="0.00817652280320541 0.00122584211922395 0.0331419658967293"
+      mass="0.4655"
+      ixx="0.00025207" ixy="0.00000000" ixz="-0.00002832"
+      iyy="0.00015464" iyz="0.00000000" izz="0.00023416"/>
+    <xacro:rebot_arm_rs_link
+      name="link2" mesh="link2.STL"
+      com="-0.117864812717456 -0.00342226413942967 -0.0271551938501484"
+      mass="1.552"
+      ixx="0.00073374" ixy="-0.00000043" ixz="0.00000851"
+      iyy="0.01255987" iyz="0.00000128" izz="0.01281387"/>
+    <xacro:rebot_arm_rs_link
+      name="link3" mesh="link3.STL"
+      com="0.103427154487799 -0.0664137912104635 -0.0271068687716704"
+      mass="1.252"
+      ixx="0.00046807" ixy="-0.00003456" ixz="-0.00004260"
+      iyy="0.00632695" iyz="0.00000006" izz="0.00648221"/>
+    <xacro:rebot_arm_rs_link
+      name="link4" mesh="link4.STL"
+      com="0.0475544540775559 -0.0441113470158517 -0.0314111924918381"
+      mass="0.46"
+      ixx="0.00045986" ixy="0.00024219" ixz="-0.0"
+      iyy="0.00075258" iyz="-0.0" izz="0.00066742"/>
+    <xacro:rebot_arm_rs_link
+      name="link5" mesh="link5.STL"
+      com="0.0114400622356175 4.7907739316217E-06 0.0380487481818926"
+      mass="0.20120457182895"
+      ixx="7.34238025911107E-05" ixy="1.35700947009798E-08" ixz="-8.58146433770359E-07"
+      iyy="5.5153884237714E-05" iyz="-1.32742144977931E-08" izz="5.29920095811017E-05"/>
+    <xacro:rebot_arm_rs_link
+      name="link6" mesh="link6.STL"
+      com="1.80196022567525E-05 2.48334592051007E-08 0.00434805764057547"
+      mass="0.1"
+      ixx="4.42273835852359E-06" ixy="3.16758463739482E-12" ixz="1.51852818442002E-10"
+      iyy="4.37185522080034E-06" iyz="-2.21864017603015E-12" izz="8.54299378942051E-06"/>
 
     <joint name="joint1" type="revolute">
       <origin xyz="-0.00034283 -0.00098683 0.075" rpy="0 0 0"/>
@@ -63,4 +108,3 @@
     </joint>
   </xacro:macro>
 </robot>
-

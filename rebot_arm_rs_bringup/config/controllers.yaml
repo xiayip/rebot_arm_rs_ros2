@@ -11,6 +11,11 @@ controller_manager:
     rebot_arm_rs_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    # Validation-only feedforward controller. It is intentionally not spawned
+    # by the bringup launch files; load it explicitly during staged t_ff tests.
+    rebot_arm_rs_t_ff_controller:
+      type: forward_command_controller/ForwardCommandController
+
 rebot_arm_rs_forward_position_controller:
   ros__parameters:
     joints: [joint1, joint2, joint3, joint4, joint5, joint6]
@@ -27,3 +32,8 @@ rebot_arm_rs_trajectory_controller:
     constraints:
       stopped_velocity_tolerance: 0.02
       goal_time: 1.0
+
+rebot_arm_rs_t_ff_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    interface_name: t_ff

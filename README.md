@@ -41,6 +41,10 @@ adding another motor, gripper, hand, or sensor protocol.
 - Each joint exports the complete MIT command tuple as `position`, `velocity`, `kp`, `kd`, and
   `t_ff`. The trajectory controller claims only `position`; the remaining interfaces retain their
   configured startup values until a future MIT controller claims them.
+- Runtime feedback has one source: every operation-status response updates position, velocity,
+  effort, temperature, and fault state at the control rate. `0x7019` is read once during activation
+  only to establish the safe initial hold position; it is not polled and cannot overwrite runtime
+  state. Parameter reads remain available to separate diagnostic tools.
 - All MIT commands are clamped to the model-specific limits. Position is additionally constrained
   to the joint limits and to a configurable maximum step.
 - J1-J3 are configured as RS-06, J4-J6 as RS-00, all with host ID `0xFD`.

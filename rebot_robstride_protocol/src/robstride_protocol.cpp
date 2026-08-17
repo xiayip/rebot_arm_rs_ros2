@@ -96,7 +96,6 @@ void RobStrideProtocol::configure(
     }
     devices_.push_back(device);
   }
-  next_poll_device_ = 0;
   reset_state();
 }
 
@@ -115,8 +114,6 @@ void RobStrideProtocol::reset_state() {
     device.status_received = false;
     device.mechanical_position_received = false;
     device.faulted = false;
-    device.last_mechanical_position = 0.0;
-    device.last_mechanical_position_time = {};
   }
 }
 
@@ -149,36 +146,9 @@ std::vector<std::string> RobStrideProtocol::missing_initial_states() const {
   return names;
 }
 
-bool RobStrideProtocol::update_mechanical_position(
-    Device &device, double motor_position,
-    std::chrono::steady_clock::time_point timestamp) {
-  const double next_position =
-      device.direction * motor_position + device.offset;
-  if (device.mechanical_position_received &&
-      timestamp > device.last_mechanical_position_time) {
-    const double seconds = std::chrono::duration<double>(
-                               timestamp - device.last_mechanical_position_time)
-                               .count();
-    if (seconds > 1e-6) {
-      const double measured_velocity =
-          (next_position - device.last_mechanical_position) / seconds;
-      if (std::abs(measured_velocity) <= device.limits.velocity_max) {
-        device.velocity = measured_velocity;
-      } else {
-        return false;
-      }
-    }
-  }
-  device.position = next_position;
-  device.position_valid = true;
-  device.last_mechanical_position = next_position;
-  device.last_mechanical_position_time = timestamp;
-  return true;
-}
-
 bool RobStrideProtocol::process_frame(
     const shared_can_interface::v1::CanFrame &frame,
-    std::chrono::steady_clock::time_point timestamp) {
+    std::chrono::steady_clock::time_point /*timestamp*/) {
   if (!frame.extended) {
     return false;
   }
@@ -198,13 +168,15 @@ bool RobStrideProtocol::process_frame(
           std::abs(motor_position) > device->limits.position_max) {
         return false;
       }
-      if (!update_mechanical_position(*device, motor_position, timestamp)) {
-        return false;
-      }
-      if (!std::isfinite(device->command_position)) {
+      // 0x7019 is used exactly once to establish a safe hold target before
+      // enabling the motor. Runtime state is never overwritten by parameter
+      // responses; operation-status is the only running feedback source.
+      if (!device->mechanical_position_received) {
+        device->position = device->direction * motor_position + device->offset;
+        device->position_valid = true;
         device->command_position = device->position;
+        device->mechanical_position_received = true;
       }
-      device->mechanical_position_received = true;
     }
     return true;
   }
@@ -221,8 +193,11 @@ bool RobStrideProtocol::process_frame(
   if (!status) {
     return false;
   }
+  device->position = device->direction * status->position + device->offset;
+  device->velocity = device->direction * status->velocity;
   device->effort = device->direction * status->torque;
   device->temperature_c = status->temperature_c;
+  device->position_valid = true;
   device->status_received = true;
   device->faulted = status->uncalibrated || status->stall ||
                     status->magnetic_encoder_fault || status->overtemperature ||
@@ -232,13 +207,7 @@ bool RobStrideProtocol::process_frame(
 
 std::optional<shared_can_interface::v1::CanFrame>
 RobStrideProtocol::periodic_request() {
-  if (devices_.empty()) {
-    return std::nullopt;
-  }
-  const auto &device = devices_[next_poll_device_];
-  next_poll_device_ = (next_poll_device_ + 1U) % devices_.size();
-  return codec::make_read_parameter(device.motor_id, host_id_,
-                                    kMechanicalPosition);
+  return std::nullopt;
 }
 
 std::vector<shared_can_interface::v1::TimedFrameBatch>
@@ -344,7 +313,7 @@ bool RobStrideProtocol::get_state(const std::string &device_name,
     value = device->position;
     return true;
   }
-  if (interface_name == "velocity" && device->position_valid) {
+  if (interface_name == "velocity" && device->status_received) {
     value = device->velocity;
     return true;
   }

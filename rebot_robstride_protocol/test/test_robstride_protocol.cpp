@@ -161,7 +161,7 @@ TEST(RobStridePlugin, RejectsUnsupportedNamedInterfaces) {
                std::invalid_argument);
 }
 
-TEST(RobStridePlugin, DerivesVelocityOnlyFromMechanicalPositionSamples) {
+TEST(RobStridePlugin, UsesOperationStatusAsTheOnlyRuntimeStateSource) {
   rebot_robstride_protocol::RobStrideProtocol protocol;
   shared_can_interface::v1::DeviceConfiguration device;
   device.name = "joint1";
@@ -179,41 +179,60 @@ TEST(RobStridePlugin, DerivesVelocityOnlyFromMechanicalPositionSamples) {
   position_reply.data = {0x19, 0x70, 0, 0, 0, 0, 0, 0};
   ASSERT_TRUE(protocol.process_frame(position_reply, start));
 
-  codec::Frame status_frame;
+  double velocity = 0.0;
+  EXPECT_FALSE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_FALSE(protocol.periodic_request().has_value());
+
+  auto status_frame = codec::make_mit_command(
+      1, codec::limits_for_model("rs-06"), 0.25F, 3.5F, 0.0F, 0.0F, 0.0F);
   status_frame.arbitration_id = codec::build_extended_id(
       codec::CommunicationType::kOperationStatus, 1, 0xFD);
-  status_frame.data = {0x7F, 0xFF, 0x90, 0x00, 0x7F, 0xFF, 0x00, 0xFA};
-  const auto decoded_status =
-      codec::decode_status(status_frame, codec::limits_for_model("rs-06"));
-  ASSERT_TRUE(decoded_status.has_value());
-  ASSERT_GT(std::abs(decoded_status->velocity), 1.0F);
   ASSERT_TRUE(protocol.process_frame(status_frame,
-                                     start + std::chrono::milliseconds(10)));
+                                     start + std::chrono::milliseconds(5)));
 
-  double velocity = 0.0;
+  double position = 0.0;
+  ASSERT_TRUE(protocol.get_state("joint1", "position", position));
   ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
-  EXPECT_DOUBLE_EQ(velocity, 0.0);
+  EXPECT_NEAR(position, 0.25, 4e-4);
+  EXPECT_NEAR(velocity, 3.5, 0.002);
 
+  // Later diagnostic parameter responses must not overwrite live state.
   position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x00, 0x3F};
   ASSERT_TRUE(protocol.process_frame(position_reply,
-                                     start + std::chrono::milliseconds(200)));
+                                     start + std::chrono::milliseconds(50)));
+  ASSERT_TRUE(protocol.get_state("joint1", "position", position));
   ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
-  EXPECT_NEAR(velocity, 2.5, 1e-9);
-
-  status_frame.data[2] = 0xF0;
-  ASSERT_TRUE(protocol.process_frame(status_frame,
-                                     start + std::chrono::milliseconds(210)));
-  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
-  EXPECT_NEAR(velocity, 2.5, 1e-9);
-
-  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x80, 0x3F};
-  ASSERT_TRUE(protocol.process_frame(position_reply,
-                                     start + std::chrono::milliseconds(400)));
-  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
-  EXPECT_NEAR(velocity, 2.5, 1e-9);
+  EXPECT_NEAR(position, 0.25, 4e-4);
+  EXPECT_NEAR(velocity, 3.5, 0.002);
 }
 
-TEST(RobStridePlugin, RejectsInvalidMechanicalPositionFeedback) {
+TEST(RobStridePlugin, AppliesDirectionAndOffsetToStatusFeedback) {
+  rebot_robstride_protocol::RobStrideProtocol protocol;
+  shared_can_interface::v1::DeviceConfiguration device;
+  device.name = "joint1";
+  device.command_interfaces = {"position"};
+  device.state_interfaces = {"position", "velocity"};
+  device.parameters = {{"motor_id", "1"},   {"model", "rs-06"},
+                       {"direction", "-1"}, {"offset", "0.1"},
+                       {"mit_kp", "50"},    {"mit_kd", "3"}};
+  protocol.configure({{"host_id", "0xFD"}}, {device});
+
+  auto status_frame = codec::make_mit_command(
+      1, codec::limits_for_model("rs-06"), 0.24F, 1.5F, 0.0F, 0.0F, 0.0F);
+  status_frame.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kOperationStatus, 1, 0xFD);
+  ASSERT_TRUE(
+      protocol.process_frame(status_frame, std::chrono::steady_clock::now()));
+
+  double position = 0.0;
+  double velocity = 0.0;
+  ASSERT_TRUE(protocol.get_state("joint1", "position", position));
+  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_NEAR(position, -0.14, 4e-4);
+  EXPECT_NEAR(velocity, -1.5, 0.002);
+}
+
+TEST(RobStridePlugin, ValidatesOnlyTheInitialMechanicalPositionSnapshot) {
   rebot_robstride_protocol::RobStrideProtocol protocol;
   shared_can_interface::v1::DeviceConfiguration device;
   device.name = "joint1";
@@ -238,13 +257,13 @@ TEST(RobStridePlugin, RejectsInvalidMechanicalPositionFeedback) {
 
   position_reply.data = {0x19, 0x70, 0, 0, 0, 0, 0, 0};
   ASSERT_TRUE(protocol.process_frame(position_reply, start));
-  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0x20, 0x41};
-  EXPECT_FALSE(protocol.process_frame(position_reply,
-                                      start + std::chrono::milliseconds(1)));
+  position_reply.data = {0x19, 0x70, 0, 0, 0x00, 0x00, 0xA0, 0x3F};
+  EXPECT_TRUE(protocol.process_frame(position_reply,
+                                     start + std::chrono::milliseconds(1)));
   double position = 1.0;
   double velocity = 1.0;
   ASSERT_TRUE(protocol.get_state("joint1", "position", position));
-  ASSERT_TRUE(protocol.get_state("joint1", "velocity", velocity));
+  EXPECT_FALSE(protocol.get_state("joint1", "velocity", velocity));
   EXPECT_DOUBLE_EQ(position, 0.0);
-  EXPECT_DOUBLE_EQ(velocity, 0.0);
+  EXPECT_DOUBLE_EQ(velocity, 1.0);
 }

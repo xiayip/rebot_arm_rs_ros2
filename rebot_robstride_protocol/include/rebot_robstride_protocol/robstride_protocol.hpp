@@ -28,6 +28,8 @@ public:
                      std::chrono::steady_clock::time_point timestamp) override;
   std::optional<shared_can_interface::v1::CanFrame> periodic_request() override;
   std::vector<shared_can_interface::v1::TimedFrameBatch>
+  pre_enable_sequence() const override;
+  std::vector<shared_can_interface::v1::TimedFrameBatch>
   enable_sequence() const override;
   std::vector<shared_can_interface::v1::CanFrame>
   disable_frames() const override;
@@ -39,6 +41,9 @@ public:
   bool get_state(const std::string &device_name,
                  const std::string &interface_name,
                  double &value) const override;
+  bool get_initial_command(const std::string &device_name,
+                           const std::string &interface_name,
+                           double &value) const override;
   bool faulted(const std::string &device_name) const override;
 
 private:
@@ -59,9 +64,16 @@ private:
     double command_t_ff{0.0};
     double command_kp{0.0};
     double command_kd{0.0};
+    double torque_constant_nm_per_arms{0.0};
+    double filtered_current_peak{0.0};
+    double startup_preload_max{0.05};
+    std::uint8_t run_mode{0};
+    std::uint8_t mode_state{0};
     bool position_valid{false};
     bool status_received{false};
     bool mechanical_position_received{false};
+    bool filtered_current_received{false};
+    bool run_mode_received{false};
     bool faulted{false};
   };
 

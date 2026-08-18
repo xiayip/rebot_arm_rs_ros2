@@ -7,12 +7,10 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     can_interface = LaunchConfiguration("can_interface")
-    auto_enable = LaunchConfiguration("auto_enable_on_activate")
     activate_trajectory = LaunchConfiguration("activate_trajectory_controller")
     return LaunchDescription(
         [
             DeclareLaunchArgument("can_interface", default_value="can1"),
-            DeclareLaunchArgument("auto_enable_on_activate", default_value="true"),
             DeclareLaunchArgument("activate_trajectory_controller", default_value="true"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -23,7 +21,6 @@ def generate_launch_description():
                 launch_arguments={
                     "use_mock_hardware": "false",
                     "can_interface": can_interface,
-                    "auto_enable_on_activate": auto_enable,
                     "activate_trajectory_controller": activate_trajectory,
                 }.items(),
             ),

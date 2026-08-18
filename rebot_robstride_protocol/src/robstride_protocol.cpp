@@ -12,6 +12,18 @@ namespace {
 
 constexpr std::uint16_t kRunMode = 0x7005;
 constexpr std::uint16_t kMechanicalPosition = 0x7019;
+constexpr std::uint16_t kFilteredCurrent = 0x701A;
+constexpr double kPeakToRms = 0.70710678118654752440;
+
+double torque_constant_for_model(const std::string &model) {
+  if (model == "rs-06") {
+    return 1.09;
+  }
+  if (model == "rs-00") {
+    return 1.48;
+  }
+  throw std::invalid_argument("unsupported RobStride model: " + model);
+}
 
 const std::string &
 required_parameter(const shared_can_interface::v1::ParameterMap &parameters,
@@ -71,8 +83,19 @@ void RobStrideProtocol::configure(
       throw std::invalid_argument("duplicate RobStride motor ID: " +
                                   std::to_string(device.motor_id));
     }
-    device.limits = codec::limits_for_model(
-        required_parameter(configuration.parameters, "model"));
+    const auto model = required_parameter(configuration.parameters, "model");
+    device.limits = codec::limits_for_model(model);
+    device.torque_constant_nm_per_arms = torque_constant_for_model(model);
+    if (const auto torque_constant =
+            configuration.parameters.find("torque_constant_nm_per_arms");
+        torque_constant != configuration.parameters.end()) {
+      device.torque_constant_nm_per_arms = std::stod(torque_constant->second);
+    }
+    if (const auto preload_max =
+            configuration.parameters.find("startup_preload_max");
+        preload_max != configuration.parameters.end()) {
+      device.startup_preload_max = std::stod(preload_max->second);
+    }
     device.direction =
         std::stod(required_parameter(configuration.parameters, "direction"));
     device.offset =
@@ -94,6 +117,16 @@ void RobStrideProtocol::configure(
       throw std::invalid_argument(device.name +
                                   " mit_kd is outside model limits");
     }
+    if (!std::isfinite(device.torque_constant_nm_per_arms) ||
+        device.torque_constant_nm_per_arms <= 0.0) {
+      throw std::invalid_argument(device.name +
+                                  " torque constant must be positive");
+    }
+    if (!std::isfinite(device.startup_preload_max) ||
+        device.startup_preload_max < 0.0) {
+      throw std::invalid_argument(device.name +
+                                  " startup preload limit is invalid");
+    }
     devices_.push_back(device);
   }
   reset_state();
@@ -110,9 +143,14 @@ void RobStrideProtocol::reset_state() {
     device.command_t_ff = 0.0;
     device.command_kp = device.mit_kp;
     device.command_kd = device.mit_kd;
+    device.filtered_current_peak = 0.0;
+    device.run_mode = 0;
+    device.mode_state = 0;
     device.position_valid = false;
     device.status_received = false;
     device.mechanical_position_received = false;
+    device.filtered_current_received = false;
+    device.run_mode_received = false;
     device.faulted = false;
   }
 }
@@ -120,10 +158,14 @@ void RobStrideProtocol::reset_state() {
 std::vector<shared_can_interface::v1::CanFrame>
 RobStrideProtocol::initial_state_requests() const {
   std::vector<shared_can_interface::v1::CanFrame> frames;
-  frames.reserve(devices_.size());
+  frames.reserve(devices_.size() * 3U);
   for (const auto &device : devices_) {
     frames.push_back(codec::make_read_parameter(device.motor_id, host_id_,
                                                 kMechanicalPosition));
+    frames.push_back(
+        codec::make_read_parameter(device.motor_id, host_id_, kRunMode));
+    frames.push_back(codec::make_read_parameter(device.motor_id, host_id_,
+                                                kFilteredCurrent));
   }
   return frames;
 }
@@ -132,7 +174,9 @@ bool RobStrideProtocol::initial_state_ready() const {
   return !devices_.empty() &&
          std::all_of(devices_.begin(), devices_.end(),
                      [](const Device &device) {
-                       return device.mechanical_position_received;
+                       return device.mechanical_position_received &&
+                              device.filtered_current_received &&
+                              device.run_mode_received;
                      });
 }
 
@@ -141,6 +185,12 @@ std::vector<std::string> RobStrideProtocol::missing_initial_states() const {
   for (const auto &device : devices_) {
     if (!device.mechanical_position_received) {
       names.push_back(device.name);
+    }
+    if (!device.run_mode_received) {
+      names.push_back(device.name + "/run_mode");
+    }
+    if (!device.filtered_current_received) {
+      names.push_back(device.name + "/iqf");
     }
   }
   return names;
@@ -177,6 +227,16 @@ bool RobStrideProtocol::process_frame(
         device->command_position = device->position;
         device->mechanical_position_received = true;
       }
+    } else if (parameter->parameter_id == kRunMode) {
+      device->run_mode = parameter->raw_value[0];
+      device->run_mode_received = true;
+    } else if (parameter->parameter_id == kFilteredCurrent) {
+      const double current = codec::parameter_as_f32(*parameter);
+      if (!std::isfinite(current)) {
+        return false;
+      }
+      device->filtered_current_peak = current;
+      device->filtered_current_received = true;
     }
     return true;
   }
@@ -197,6 +257,7 @@ bool RobStrideProtocol::process_frame(
   device->velocity = device->direction * status->velocity;
   device->effort = device->direction * status->torque;
   device->temperature_c = status->temperature_c;
+  device->mode_state = status->mode_state;
   device->position_valid = true;
   device->status_received = true;
   device->faulted = status->uncalibrated || status->stall ||
@@ -211,29 +272,85 @@ RobStrideProtocol::periodic_request() {
 }
 
 std::vector<shared_can_interface::v1::TimedFrameBatch>
+RobStrideProtocol::pre_enable_sequence() const {
+  shared_can_interface::v1::TimedFrameBatch probe;
+  probe.delay_after = std::chrono::milliseconds(10);
+  probe.frames.reserve(devices_.size());
+  for (const auto &device : devices_) {
+    if (!device.run_mode_received || device.run_mode != 0U) {
+      continue;
+    }
+    if (!std::isfinite(device.command_position)) {
+      throw std::runtime_error("cannot probe RobStride device without command "
+                               "position: " +
+                               device.name);
+    }
+    const double motor_target =
+        device.direction * (device.command_position - device.offset);
+    probe.frames.push_back(codec::make_mit_command(
+        device.motor_id, device.limits, static_cast<float>(motor_target), 0.0F,
+        static_cast<float>(device.command_kp),
+        static_cast<float>(device.command_kd), 0.0F));
+  }
+  if (probe.frames.empty()) {
+    return {};
+  }
+  return {std::move(probe)};
+}
+
+std::vector<shared_can_interface::v1::TimedFrameBatch>
 RobStrideProtocol::enable_sequence() const {
   shared_can_interface::v1::TimedFrameBatch set_mode;
-  set_mode.delay_after = std::chrono::milliseconds(40);
-  shared_can_interface::v1::TimedFrameBatch enable;
-  enable.delay_after = std::chrono::milliseconds(10);
-  shared_can_interface::v1::TimedFrameBatch hold_position;
+  shared_can_interface::v1::TimedFrameBatch enable_and_hold;
 
   for (const auto &device : devices_) {
     if (!device.position_valid) {
       throw std::runtime_error(
           "cannot enable RobStride device without position: " + device.name);
     }
-    set_mode.frames.push_back(
-        codec::make_write_parameter_i8(device.motor_id, host_id_, kRunMode, 0));
-    enable.frames.push_back(codec::make_enable(device.motor_id, host_id_));
+    if (!device.run_mode_received) {
+      throw std::runtime_error("cannot enable RobStride device without run "
+                               "mode: " +
+                               device.name);
+    }
+    if (device.run_mode != 0U) {
+      set_mode.frames.push_back(codec::make_write_parameter_i8(
+          device.motor_id, host_id_, kRunMode, 0));
+    }
+    if (!std::isfinite(device.command_position)) {
+      throw std::runtime_error("cannot enable RobStride device without command "
+                               "position: " +
+                               device.name);
+    }
     const double motor_target =
-        device.direction * (device.position - device.offset);
-    hold_position.frames.push_back(codec::make_mit_command(
+        device.direction * (device.command_position - device.offset);
+    // A redundant enable can briefly reset an already-running motor's hold
+    // controller. pre_enable_sequence() has just refreshed the hold command
+    // and collected its status, so only enable a motor that is not already in
+    // Motor mode (mode_state == 2).
+    const bool already_running_in_mit = device.run_mode == 0U &&
+                                        device.status_received &&
+                                        device.mode_state == 2U;
+    if (!already_running_in_mit) {
+      enable_and_hold.frames.push_back(
+          codec::make_enable(device.motor_id, host_id_));
+    }
+    // Keep the enable-to-hold gap to one CAN frame for a genuinely disabled
+    // motor. Do not insert a sleep here: gravity can move an arm before the
+    // first MIT command arrives.
+    enable_and_hold.frames.push_back(codec::make_mit_command(
         device.motor_id, device.limits, static_cast<float>(motor_target), 0.0F,
         static_cast<float>(device.command_kp),
         static_cast<float>(device.command_kd), 0.0F));
   }
-  return {std::move(set_mode), std::move(enable), std::move(hold_position)};
+
+  std::vector<shared_can_interface::v1::TimedFrameBatch> sequence;
+  if (!set_mode.frames.empty()) {
+    set_mode.delay_after = std::chrono::milliseconds(40);
+    sequence.push_back(std::move(set_mode));
+  }
+  sequence.push_back(std::move(enable_and_hold));
+  return sequence;
 }
 
 std::vector<shared_can_interface::v1::CanFrame>
@@ -326,6 +443,29 @@ bool RobStrideProtocol::get_state(const std::string &device_name,
     return true;
   }
   return false;
+}
+
+bool RobStrideProtocol::get_initial_command(const std::string &device_name,
+                                            const std::string &interface_name,
+                                            double &value) const {
+  const auto *device = find_by_name(device_name);
+  if (device == nullptr) {
+    return false;
+  }
+  if (interface_name != "position" || !device->position_valid ||
+      !device->filtered_current_received || !device->run_mode_received ||
+      device->run_mode != 0U || device->mit_kp <= 0.0) {
+    return get_state(device_name, interface_name, value);
+  }
+
+  const double joint_torque = device->direction *
+                              device->filtered_current_peak * kPeakToRms *
+                              device->torque_constant_nm_per_arms;
+  const double preload =
+      std::clamp(joint_torque / device->mit_kp, -device->startup_preload_max,
+                 device->startup_preload_max);
+  value = device->position + preload;
+  return std::isfinite(value);
 }
 
 bool RobStrideProtocol::faulted(const std::string &device_name) const {

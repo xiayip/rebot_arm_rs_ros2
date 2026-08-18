@@ -90,6 +90,15 @@ TEST(RobStridePlugin, RejectsFramesForAnotherHostAndTracksInitialState) {
                        {"mit_kp", "50"},   {"mit_kd", "3"}};
   protocol.configure(bus, {device});
 
+  const auto requests = protocol.initial_state_requests();
+  ASSERT_EQ(requests.size(), 3U);
+  EXPECT_EQ(requests[0].data[0], 0x19);
+  EXPECT_EQ(requests[0].data[1], 0x70);
+  EXPECT_EQ(requests[1].data[0], 0x05);
+  EXPECT_EQ(requests[1].data[1], 0x70);
+  EXPECT_EQ(requests[2].data[0], 0x1A);
+  EXPECT_EQ(requests[2].data[1], 0x70);
+
   codec::Frame wrong_host;
   wrong_host.arbitration_id = codec::build_extended_id(
       codec::CommunicationType::kReadParameter, 1, 0xFE);
@@ -101,6 +110,14 @@ TEST(RobStridePlugin, RejectsFramesForAnotherHostAndTracksInitialState) {
   auto reply = wrong_host;
   reply.arbitration_id = codec::build_extended_id(
       codec::CommunicationType::kReadParameter, 1, 0xFD);
+  EXPECT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+  EXPECT_FALSE(protocol.initial_state_ready());
+
+  reply.data = {0x05, 0x70, 0, 0, 0, 0, 0, 0};
+  EXPECT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+  EXPECT_FALSE(protocol.initial_state_ready());
+
+  reply.data = {0x1A, 0x70, 0, 0, 0, 0, 0, 0};
   EXPECT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
   EXPECT_TRUE(protocol.initial_state_ready());
   double position = 1.0;
@@ -120,6 +137,93 @@ TEST(RobStridePlugin, RejectsFramesForAnotherHostAndTracksInitialState) {
   EXPECT_EQ(commands.front().arbitration_id, expected.arbitration_id);
   EXPECT_EQ(commands.front().data, expected.data);
   EXPECT_EQ(protocol.command_frame_capacity(), 1U);
+}
+
+TEST(RobStridePlugin, SkipsRedundantEnableWhenMotorIsAlreadyRunning) {
+  rebot_robstride_protocol::RobStrideProtocol protocol;
+  shared_can_interface::v1::DeviceConfiguration device;
+  device.name = "joint1";
+  device.command_interfaces = {"position", "velocity", "kp", "kd", "t_ff"};
+  device.state_interfaces = {"position"};
+  device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
+                       {"direction", "1"}, {"offset", "0"},
+                       {"mit_kp", "50"},   {"mit_kd", "3"}};
+  protocol.configure({{"host_id", "0xFD"}}, {device});
+
+  codec::Frame reply;
+  reply.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kReadParameter, 1, 0xFD);
+  reply.data = {0x19, 0x70, 0, 0, 0, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+  reply.data = {0x05, 0x70, 0, 0, 0, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+  reply.data = {0x1A, 0x70, 0, 0, 0, 0, 0, 0x40};
+  ASSERT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+
+  double startup_position = 0.0;
+  ASSERT_TRUE(
+      protocol.get_initial_command("joint1", "position", startup_position));
+  EXPECT_NEAR(startup_position, 2.0 / std::sqrt(2.0) * 1.09 / 50.0, 1e-9);
+  ASSERT_TRUE(protocol.set_command("joint1", "position", startup_position));
+
+  const auto probe = protocol.pre_enable_sequence();
+  ASSERT_EQ(probe.size(), 1U);
+  EXPECT_EQ(probe[0].delay_after, std::chrono::milliseconds(10));
+  ASSERT_EQ(probe[0].frames.size(), 1U);
+  EXPECT_EQ(codec::parse_extended_id(probe[0].frames[0].arbitration_id)
+                .communication_type,
+            codec::CommunicationType::kOperationControl);
+
+  auto running_status = probe[0].frames[0];
+  running_status.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kOperationStatus,
+      static_cast<std::uint16_t>((2U << 14U) | 1U), 0xFD);
+  ASSERT_TRUE(
+      protocol.process_frame(running_status, std::chrono::steady_clock::now()));
+
+  const auto sequence = protocol.enable_sequence();
+  ASSERT_EQ(sequence.size(), 1U);
+  EXPECT_EQ(sequence[0].delay_after, std::chrono::milliseconds(0));
+  ASSERT_EQ(sequence[0].frames.size(), 1U);
+  EXPECT_EQ(codec::parse_extended_id(sequence[0].frames[0].arbitration_id)
+                .communication_type,
+            codec::CommunicationType::kOperationControl);
+}
+
+TEST(RobStridePlugin, CorrectsNonMitModeBeforeEnabling) {
+  rebot_robstride_protocol::RobStrideProtocol protocol;
+  shared_can_interface::v1::DeviceConfiguration device;
+  device.name = "joint1";
+  device.command_interfaces = {"position"};
+  device.state_interfaces = {"position"};
+  device.parameters = {{"motor_id", "1"},  {"model", "rs-06"},
+                       {"direction", "1"}, {"offset", "0"},
+                       {"mit_kp", "50"},   {"mit_kd", "3"}};
+  protocol.configure({{"host_id", "0xFD"}}, {device});
+
+  codec::Frame reply;
+  reply.arbitration_id = codec::build_extended_id(
+      codec::CommunicationType::kReadParameter, 1, 0xFD);
+  reply.data = {0x19, 0x70, 0, 0, 0, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+  reply.data = {0x05, 0x70, 0, 0, 1, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+  reply.data = {0x1A, 0x70, 0, 0, 0, 0, 0, 0};
+  ASSERT_TRUE(protocol.process_frame(reply, std::chrono::steady_clock::now()));
+
+  EXPECT_TRUE(protocol.pre_enable_sequence().empty());
+  const auto sequence = protocol.enable_sequence();
+  ASSERT_EQ(sequence.size(), 2U);
+  EXPECT_EQ(sequence[0].delay_after, std::chrono::milliseconds(40));
+  ASSERT_EQ(sequence[0].frames.size(), 1U);
+  const auto &set_mode = sequence[0].frames[0];
+  EXPECT_EQ(
+      codec::parse_extended_id(set_mode.arbitration_id).communication_type,
+      codec::CommunicationType::kWriteParameter);
+  EXPECT_EQ(set_mode.data[0], 0x05);
+  EXPECT_EQ(set_mode.data[1], 0x70);
+  EXPECT_EQ(set_mode.data[4], 0U);
+  ASSERT_EQ(sequence[1].frames.size(), 2U);
 }
 
 TEST(RobStridePlugin, AppliesJointDirectionToMitMotionAndFeedForward) {

@@ -42,7 +42,7 @@
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="rebot_arm_rs_ros2_control" params="name use_mock_hardware mock_sensor_commands can_interface auto_enable_on_activate">
+  <xacro:macro name="rebot_arm_rs_ros2_control" params="name use_mock_hardware mock_sensor_commands can_interface">
     <ros2_control name="${name}" type="system">
       <hardware>
         <xacro:if value="${use_mock_hardware}">
@@ -55,9 +55,7 @@
           <param name="transport_plugin">shared_can_ros2/SocketCanTransport</param>
           <param name="can_interface">${can_interface}</param>
           <param name="host_id">0xFD</param>
-          <param name="auto_enable_on_activate">${auto_enable_on_activate}</param>
           <param name="require_all_devices">true</param>
-          <param name="disable_on_deactivate">true</param>
           <param name="initial_read_timeout_ms">1200</param>
           <param name="poll_divider">1</param>
           <param name="max_command_step">0.02</param>

@@ -62,6 +62,10 @@ adding another motor, gripper, hand, or sensor protocol.
   configured rate. For every joint it reports the position and velocity references, raw and
   scaled gravity torque, runtime gravity factor, applied feed-forward torque, P and D feedback
   torques, and their summed MIT command torque.
+- The joint impedance controller sends its stiffness and damping through the motor-side MIT
+  `kp`/`kd` loop. The ROS realtime loop supplies calibrated gravity and URDF soft-limit torque
+  through shaped `t_ff`, captures the current posture as the activation equilibrium, and accepts
+  rate-limited `trajectory_msgs/msg/JointTrajectoryPoint` commands on `~/commands`.
 - Runtime feedback has one source: every operation-status response updates position, velocity,
   effort, temperature, and fault state at the control rate. `0x7019` is read once during activation
   only to establish the safe initial hold position; it is not polled and cannot overwrite runtime
@@ -112,6 +116,19 @@ ros2 param set /rebot_arm_rs_position_adapter \
 
 # Inspect the realtime MIT command decomposition.
 ros2 topic echo /rebot_arm_rs_position_adapter/mit_state
+
+# Switch from trajectory position mode to compliant joint impedance mode.
+ros2 control switch_controllers \
+  --deactivate rebot_arm_rs_trajectory_controller rebot_arm_rs_position_adapter \
+  --activate rebot_arm_rs_impedance_controller --strict -c /controller_manager
+
+# Set a new ordered joint equilibrium; omitted velocities default to zero.
+ros2 topic pub --once /rebot_arm_rs_impedance_controller/commands \
+  trajectory_msgs/msg/JointTrajectoryPoint \
+  "{positions: [0.0, 0.3, 0.3, 0.0, 0.0, 0.0]}"
+
+# Inspect the commanded MIT gains, feed-forward, and estimated torque decomposition.
+ros2 topic echo /rebot_arm_rs_impedance_controller/state
 ```
 
 ## Source references

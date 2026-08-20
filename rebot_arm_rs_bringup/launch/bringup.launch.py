@@ -82,23 +82,25 @@ def generate_launch_description():
         ],
         output="screen",
     )
-    damping_spawner_after_active_chain = Node(
+    mode_controllers_spawner_after_active_chain = Node(
         condition=IfCondition(activate_trajectory),
         package="controller_manager",
         executable="spawner",
         arguments=[
             "rebot_arm_rs_damping_controller",
+            "rebot_arm_rs_impedance_controller",
             "-c", "/controller_manager",
             "--inactive",
         ],
         output="screen",
     )
-    damping_spawner_after_inactive_chain = Node(
+    mode_controllers_spawner_after_inactive_chain = Node(
         condition=UnlessCondition(activate_trajectory),
         package="controller_manager",
         executable="spawner",
         arguments=[
             "rebot_arm_rs_damping_controller",
+            "rebot_arm_rs_impedance_controller",
             "-c", "/controller_manager",
             "--inactive",
         ],
@@ -128,13 +130,13 @@ def generate_launch_description():
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=active_upstream_chain_spawner,
-                    on_exit=[damping_spawner_after_active_chain],
+                    on_exit=[mode_controllers_spawner_after_active_chain],
                 )
             ),
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=inactive_upstream_chain_spawner,
-                    on_exit=[damping_spawner_after_inactive_chain],
+                    on_exit=[mode_controllers_spawner_after_inactive_chain],
                 )
             ),
         ]

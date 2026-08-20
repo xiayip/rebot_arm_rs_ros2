@@ -14,6 +14,9 @@ controller_manager:
     rebot_arm_rs_damping_controller:
       type: mit_damping_controller/MitDampingController
 
+    rebot_arm_rs_impedance_controller:
+      type: mit_impedance_controller/MitImpedanceController
+
     rebot_arm_rs_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
@@ -62,6 +65,34 @@ rebot_arm_rs_damping_controller:
     command_shaping:
       torque_limit: [1.0, 15.0, 8.0, 3.0, 2.0, 1.0]
       torque_rate_limit: [5.0, 10.0, 8.0, 3.0, 2.0, 2.0]
+      transition_duration: 1.0
+    soft_limits:
+      enabled: true
+      margin: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
+      stiffness: [3.0, 8.0, 8.0, 3.0, 3.0, 3.0]
+      torque_limit: [1.0, 3.0, 3.0, 1.0, 1.0, 1.0]
+
+rebot_arm_rs_impedance_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    downstream_controller: rebot_arm_rs_mit_controller
+    # Compliant physical-arm baseline. K and D are runtime adjustable.
+    stiffness: [20.0, 15.0, 15.0, 8.0, 5.0, 3.0]
+    damping_coefficients: [2.0, 4.0, 4.0, 3.0, 2.0, 1.5]
+    reference:
+      position_rate_limit: [0.5, 0.3, 0.3, 0.5, 0.5, 0.5]
+      velocity_limit: [1.0, 1.0, 1.0, 1.5, 1.5, 1.5]
+    state_publish_rate: 50.0
+    gravity_compensation:
+      enabled: true
+      factor: 1.0
+      factor_transition_duration: 1.0
+      gravity: [0.0, 0.0, -9.80665]
+      scale: [0.0, 0.9031, 1.1255, 1.2299, 0.0, 0.0]
+      bias: [0.0, -0.6359, 0.1608, 0.1764, 0.0, 0.0]
+    command_shaping:
+      torque_limit: [1.5, 15.0, 8.0, 3.0, 2.0, 1.0]
+      torque_rate_limit: [10.0, 20.0, 15.0, 10.0, 10.0, 10.0]
       transition_duration: 1.0
     soft_limits:
       enabled: true

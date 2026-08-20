@@ -52,18 +52,56 @@ def generate_launch_description():
         arguments=["joint_state_broadcaster", "-c", "/controller_manager"],
         output="screen",
     )
-    active_trajectory_spawner = Node(
+    mit_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["rebot_arm_rs_mit_controller", "-c", "/controller_manager"],
+        output="screen",
+    )
+    active_upstream_chain_spawner = Node(
         condition=IfCondition(activate_trajectory),
         package="controller_manager",
         executable="spawner",
-        arguments=["rebot_arm_rs_trajectory_controller", "-c", "/controller_manager"],
+        arguments=[
+            "rebot_arm_rs_position_adapter",
+            "rebot_arm_rs_trajectory_controller",
+            "-c", "/controller_manager",
+            "--activate-as-group",
+        ],
         output="screen",
     )
-    inactive_trajectory_spawner = Node(
+    inactive_upstream_chain_spawner = Node(
         condition=UnlessCondition(activate_trajectory),
         package="controller_manager",
         executable="spawner",
-        arguments=["rebot_arm_rs_trajectory_controller", "-c", "/controller_manager", "--inactive"],
+        arguments=[
+            "rebot_arm_rs_position_adapter",
+            "rebot_arm_rs_trajectory_controller",
+            "-c", "/controller_manager",
+            "--inactive",
+        ],
+        output="screen",
+    )
+    damping_spawner_after_active_chain = Node(
+        condition=IfCondition(activate_trajectory),
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "rebot_arm_rs_damping_controller",
+            "-c", "/controller_manager",
+            "--inactive",
+        ],
+        output="screen",
+    )
+    damping_spawner_after_inactive_chain = Node(
+        condition=UnlessCondition(activate_trajectory),
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "rebot_arm_rs_damping_controller",
+            "-c", "/controller_manager",
+            "--inactive",
+        ],
         output="screen",
     )
 
@@ -78,7 +116,25 @@ def generate_launch_description():
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=joint_state_spawner,
-                    on_exit=[active_trajectory_spawner, inactive_trajectory_spawner],
+                    on_exit=[mit_controller_spawner],
+                )
+            ),
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=mit_controller_spawner,
+                    on_exit=[active_upstream_chain_spawner, inactive_upstream_chain_spawner],
+                )
+            ),
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=active_upstream_chain_spawner,
+                    on_exit=[damping_spawner_after_active_chain],
+                )
+            ),
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=inactive_upstream_chain_spawner,
+                    on_exit=[damping_spawner_after_inactive_chain],
                 )
             ),
         ]

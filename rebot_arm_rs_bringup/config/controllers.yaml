@@ -5,26 +5,81 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-    rebot_arm_rs_forward_position_controller:
-      type: forward_command_controller/ForwardCommandController
+    rebot_arm_rs_mit_controller:
+      type: mit_controller/MitController
+
+    rebot_arm_rs_position_adapter:
+      type: mit_position_adapter_controller/MitPositionAdapterController
+
+    rebot_arm_rs_damping_controller:
+      type: mit_damping_controller/MitDampingController
 
     rebot_arm_rs_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-    # Validation-only feedforward controller. It is intentionally not spawned
-    # by the bringup launch files; load it explicitly during staged t_ff tests.
-    rebot_arm_rs_t_ff_controller:
-      type: forward_command_controller/ForwardCommandController
-
-rebot_arm_rs_forward_position_controller:
+rebot_arm_rs_mit_controller:
   ros__parameters:
     joints: [joint1, joint2, joint3, joint4, joint5, joint6]
-    interface_name: position
+
+rebot_arm_rs_position_adapter:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    downstream_controller: rebot_arm_rs_mit_controller
+    position_kp: [50.0, 120.0, 120.0, 50.0, 50.0, 50.0]
+    position_kd: [3.0, 4.0, 4.0, 5.0, 4.0, 4.0]
+    state_publish_rate: 50.0
+    gravity_compensation:
+      # Joint2/3/4 affine gravity coefficients were commissioned on the
+      # physical arm. The transition and rate limits keep startup continuous.
+      enabled: true
+      factor: 1.0
+      factor_transition_duration: 1.0
+      gravity: [0.0, 0.0, -9.80665]
+      scale: [0.0, 0.9031, 1.1255, 1.2299, 0.0, 0.0]
+      bias: [0.0, -0.6359, 0.1608, 0.1764, 0.0, 0.0]
+      torque_limit: [1.0, 15.0, 8.0, 3.0, 2.0, 1.0]
+      torque_rate_limit: [10.0, 20.0, 15.0, 10.0, 10.0, 10.0]
+      transition_duration: 1.0
+
+rebot_arm_rs_damping_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    downstream_controller: rebot_arm_rs_mit_controller
+    # Physical-arm baseline. These coefficients are runtime adjustable.
+    damping_coefficients: [2.0, 4.0, 4.0, 3.0, 2.0, 1.5]
+    damping_torque_limit: [0.6, 2.0, 2.0, 0.8, 0.4, 0.3]
+    state_publish_rate: 50.0
+    velocity_filter:
+      enabled: true
+      cutoff_frequency: 10.0
+    gravity_compensation:
+      enabled: true
+      factor: 1.0
+      factor_transition_duration: 1.0
+      gravity: [0.0, 0.0, -9.80665]
+      scale: [0.0, 0.9031, 1.1255, 1.2299, 0.0, 0.0]
+      bias: [0.0, -0.6359, 0.1608, 0.1764, 0.0, 0.0]
+    command_shaping:
+      torque_limit: [1.0, 15.0, 8.0, 3.0, 2.0, 1.0]
+      torque_rate_limit: [5.0, 10.0, 8.0, 3.0, 2.0, 2.0]
+      transition_duration: 1.0
+    soft_limits:
+      enabled: true
+      margin: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
+      stiffness: [3.0, 8.0, 8.0, 3.0, 3.0, 3.0]
+      torque_limit: [1.0, 3.0, 3.0, 1.0, 1.0, 1.0]
 
 rebot_arm_rs_trajectory_controller:
   ros__parameters:
     joints: [joint1, joint2, joint3, joint4, joint5, joint6]
-    command_interfaces: [position]
+    command_joints:
+      - rebot_arm_rs_position_adapter/joint1
+      - rebot_arm_rs_position_adapter/joint2
+      - rebot_arm_rs_position_adapter/joint3
+      - rebot_arm_rs_position_adapter/joint4
+      - rebot_arm_rs_position_adapter/joint5
+      - rebot_arm_rs_position_adapter/joint6
+    command_interfaces: [position, velocity]
     state_interfaces: [position]
     state_publish_rate: 100.0
     action_monitor_rate: 20.0
@@ -33,8 +88,9 @@ rebot_arm_rs_trajectory_controller:
     constraints:
       stopped_velocity_tolerance: 0.02
       goal_time: 1.0
-
-rebot_arm_rs_t_ff_controller:
-  ros__parameters:
-    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
-    interface_name: t_ff
+      joint1: {trajectory: 0.10, goal: 0.01}
+      joint2: {trajectory: 0.10, goal: 0.01}
+      joint3: {trajectory: 0.10, goal: 0.015}
+      joint4: {trajectory: 0.10, goal: 0.02}
+      joint5: {trajectory: 0.10, goal: 0.01}
+      joint6: {trajectory: 0.10, goal: 0.01}

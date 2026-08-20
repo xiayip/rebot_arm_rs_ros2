@@ -41,11 +41,27 @@ adding another motor, gripper, hand, or sensor protocol.
 - Activation always enables the arm. The driver first sends the preload-preserving MIT hold as a
   probe: motors already in Motor mode are not enabled again, while stopped motors receive adjacent
   enable and hold frames. Motors already in MIT `run_mode` are not reconfigured.
-- The trajectory controller is spawned active by default. Pass
-  `activate_trajectory_controller:=false` to load and configure it without claiming `position`.
+- The trajectory controller is spawned as the head of a three-controller chain by default:
+  `JointTrajectoryController -> MIT position adapter -> MIT output controller`. Pass
+  `activate_trajectory_controller:=false` to keep the MIT output controller active in safe HOLD
+  while loading the trajectory controller and position adapter as inactive.
 - Each joint exports the complete MIT command tuple as `position`, `velocity`, `kp`, `kd`, and
-  `t_ff`. The trajectory controller claims only `position`; the remaining interfaces retain their
-  configured startup values until a future MIT controller claims them.
+  `t_ff`. The MIT output controller exclusively claims that tuple and exposes chainable reference
+  interfaces. The position adapter completes each JTC position reference with the configured
+  position-mode gains, the JTC velocity reference, and an optional Pinocchio gravity
+  feed-forward torque.
+  The per-joint `position_kp` and `position_kd` arrays are runtime-adjustable and are transferred
+  into the realtime loop without requiring controller restart.
+  The default real-hardware configuration applies the commissioned affine gravity calibration for
+  joints 2-4 at `gravity_compensation.factor=1.0`; the remaining joint scales are zero.
+- The gravity model is built from the same `robot_description` used by ros2_control. Controller
+  activation preserves the previous MIT tuple's equivalent torque, then rate-limits and blends the
+  command into `g(q)` instead of stepping the feed-forward command. The runtime factor is limited
+  to `[0, 1]` and follows changes over the configured `factor_transition_duration`.
+- The position adapter publishes `~/mit_state` as `control_msgs/msg/DynamicJointState` at the
+  configured rate. For every joint it reports the position and velocity references, raw and
+  scaled gravity torque, runtime gravity factor, applied feed-forward torque, P and D feedback
+  torques, and their summed MIT command torque.
 - Runtime feedback has one source: every operation-status response updates position, velocity,
   effort, temperature, and fault state at the control rate. `0x7019` is read once during activation
   only to establish the safe initial hold position; it is not polled and cannot overwrite runtime
@@ -87,6 +103,15 @@ ros2 launch rebot_arm_rs_bringup real_world.launch.py can_interface:=can1
 # The hardware driver still enables and holds the arm.
 ros2 launch rebot_arm_rs_bringup real_world.launch.py \
   can_interface:=can1 activate_trajectory_controller:=false
+
+# Tune the position-mode gains online. Each array must contain one nonnegative value per joint.
+ros2 param set /rebot_arm_rs_position_adapter \
+  position_kp "[50.0, 120.0, 120.0, 50.0, 50.0, 50.0]"
+ros2 param set /rebot_arm_rs_position_adapter \
+  position_kd "[3.0, 4.0, 4.0, 5.0, 4.0, 4.0]"
+
+# Inspect the realtime MIT command decomposition.
+ros2 topic echo /rebot_arm_rs_position_adapter/mit_state
 ```
 
 ## Source references

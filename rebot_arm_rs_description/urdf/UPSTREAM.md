@@ -1,25 +1,39 @@
 # Upstream reBot Arm RS model
 
-The six-axis kinematic geometry, collision meshes, and inertial parameters in this package are
-synchronized from Seeed Studio's official RS model:
+The six-axis physical model and visual materials in this package are synchronized from Seeed
+Studio's ROS 2 repository:
 
-- Repository: `https://github.com/Seeed-Projects/reBotArm_control_py`
+- Repository: `https://github.com/Seeed-Projects/reBotArmController_ROS2`
 - Upstream branch: `main`
-- Verified upstream HEAD: `edf9279905f7ba399da0b5d81ef60fd359851d0c`
-- Source URDF: `urdf/00-arm-rs_asm-v3/urdf/00-arm-rs_asm-v3.urdf`
-- Source URDF Git blob: `81cff74391249ed2c9da1c3e5278e3ff2c86ddc7`
-- Source URDF SHA-256: `2012b5aa3b58878109cb9e3c5deef919a87bd09a67d561662b2904a30dd4397e`
-- Synchronization date: 2026-08-13
+- Verified upstream HEAD: `e134941b71236523e831f15b470bc81186b0649f`
+- Source URDF: `src/rebotarm_bringup/description/urdf/00-arm-rs_asm-v3.urdf`
+- Source URDF Git blob: `0f70c833897af37225f089622d58fbcd58d4153f`
+- Source URDF SHA-256: `807c17cda3a5193fc4aadad5b73aebecc16e53e60707b3fa8901c90ac48ca551`
+- Source meshes: `src/rebotarm_bringup/description/meshes_rs`
+- Upstream package license declaration: `Apache-2.0`
+- Synchronization date: 2026-08-21
 
-The upstream source contains a motorized gripper. This robot currently has no gripper, so the ROS
-description intentionally ends at the massless `tool0` frame fixed to `link6`; gripper links,
-inertials, joints, and meshes are not imported.
+For `base_link` through `link6`, joint origins, axes, parent/child relationships, link inertial
+parameters, effort limits, position limits, URDF velocity limits, collision meshes, visual meshes,
+material assignments, and palette RGBA values match the upstream model numerically.
 
-The upstream joint origins and axes match this package. Existing driver operating limits are
-retained as a separate safety policy rather than being replaced by the CAD-export limits. The two
-sets are not consistently wider or narrower (for example, the upstream J3 upper limit is `3.14`
-rad while the current driver uses `3.50` rad), and the limits published in the product Wiki also
-differ from the CAD export. They must be reconciled and hardware-validated independently.
+The upstream source includes a motorized gripper. This robot currently has no gripper, so the local
+description ends at a massless `tool0` fixed to `link6`. Its transform is identical to upstream
+`j_gripper_end`; gripper links, inertials, joints, and meshes are intentionally omitted.
 
-The seven aggregate collision meshes in this package are byte-identical to the corresponding
-upstream `base_link.STL` and `link1.STL` through `link6.STL` files.
+## Local ROS 2 extensions
+
+The upstream model does not contain this package's `ros2_control` hardware description. Position
+command limits are kept equal to the upstream URDF. J4-J6 use the RS-00 protocol velocity encoding
+range of `33 rad/s`, rather than the CAD URDF's `40 rad/s`; `33 rad/s` is fixed by the RobStride
+RS-00 codec and is not a physical-model difference.
+
+Each visual repeats its palette RGBA inline as well as referencing the shared material name. This is
+intentional because URDF consumers differ in whether they resolve robot-level materials into
+visual-level objects.
+
+Jazzy RViz loads every entry in a link's `visual_array`, but resolves an empty per-entry material
+name back to the link's primary visual material. Secondary split meshes are therefore represented as
+zero-offset, fixed, visual-only child links. Each rendered link has exactly one visual and retains its
+own upstream material, while the physical six-axis links keep all upstream inertial and collision
+data.

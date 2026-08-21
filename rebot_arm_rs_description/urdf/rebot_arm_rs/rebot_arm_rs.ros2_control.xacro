@@ -62,12 +62,12 @@
         </xacro:unless>
       </hardware>
 
-      <xacro:rebot_arm_rs_joint_interfaces name="joint1" motor_id="0x01" model="rs-06" kp="50.0" kd="3.0" lower="-2.53" upper="2.53" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint2" motor_id="0x02" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="2.96" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint3" motor_id="0x03" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="3.50" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.39" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint1" motor_id="0x01" model="rs-06" kp="50.0" kd="3.0" lower="-2.8" upper="2.8" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint2" motor_id="0x02" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="3.14" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint3" motor_id="0x03" model="rs-06" kp="150.0" kd="10.0" lower="0.0" upper="3.14" velocity_max="50.0" torque_max="36.0" kp_max="5000.0" kd_max="100.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
       <xacro:rebot_arm_rs_joint_interfaces name="joint5" motor_id="0x05" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
-      <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
+      <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-3.14" upper="3.14" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
     </ros2_control>
   </xacro:macro>
 </robot>

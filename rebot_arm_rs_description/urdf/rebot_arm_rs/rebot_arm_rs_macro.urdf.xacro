@@ -1,23 +1,79 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="rebot_arm_rs_link" params="name mesh com mass ixx ixy ixz iyy iyz izz">
+  <xacro:property name="rs_base_black_rgba" value="0.055 0.065 0.060 1"/>
+  <xacro:property name="rs_motor_black_rgba" value="0.045 0.052 0.049 1"/>
+  <xacro:property name="rs_pla_black_rgba" value="0.090 0.106 0.102 1"/>
+  <xacro:property name="rs_wordmark_black_rgba" value="0.010 0.012 0.011 1"/>
+  <xacro:property name="rs_anodized_silver_rgba" value="0.720 0.760 0.730 1"/>
+  <xacro:property name="rs_seeed_green_rgba" value="0.725 0.835 0.118 1"/>
+
+  <material name="rs_base_black">
+    <color rgba="${rs_base_black_rgba}"/>
+  </material>
+  <material name="rs_motor_black">
+    <color rgba="${rs_motor_black_rgba}"/>
+  </material>
+  <material name="rs_pla_black">
+    <color rgba="${rs_pla_black_rgba}"/>
+  </material>
+  <material name="rs_wordmark_black">
+    <color rgba="${rs_wordmark_black_rgba}"/>
+  </material>
+  <material name="rs_anodized_silver">
+    <color rgba="${rs_anodized_silver_rgba}"/>
+  </material>
+  <material name="rs_seeed_green">
+    <color rgba="${rs_seeed_green_rgba}"/>
+  </material>
+
+  <xacro:macro name="rebot_arm_rs_inertial" params="com mass ixx ixy ixz iyy iyz izz">
+    <inertial>
+      <origin xyz="${com}" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_visual" params="mesh material rgba">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
+      </geometry>
+      <material name="${material}">
+        <color rgba="${rgba}"/>
+      </material>
+    </visual>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_visual_component" params="parent name mesh material rgba">
     <link name="${name}">
-      <inertial>
-        <origin xyz="${com}" rpy="0 0 0"/>
-        <mass value="${mass}"/>
-        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}"/>
-      </inertial>
-      <visual>
-        <geometry>
-          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
-        </geometry>
-        <material name="rebot_green"><color rgba="0.30 0.72 0.38 1.0"/></material>
-      </visual>
-      <collision>
-        <geometry>
-          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
-        </geometry>
-      </collision>
+      <xacro:rebot_arm_rs_visual mesh="${mesh}" material="${material}" rgba="${rgba}"/>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_collision" params="mesh">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
+      </geometry>
+    </collision>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_link" params="name mesh material rgba com mass ixx ixy ixz iyy iyz izz">
+    <link name="${name}">
+      <xacro:rebot_arm_rs_inertial
+        com="${com}" mass="${mass}"
+        ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
+        iyy="${iyy}" iyz="${iyz}" izz="${izz}"/>
+      <xacro:rebot_arm_rs_visual mesh="${mesh}" material="${material}" rgba="${rgba}"/>
+      <xacro:rebot_arm_rs_collision mesh="${mesh}"/>
     </link>
   </xacro:macro>
 
@@ -29,76 +85,129 @@
     -->
     <xacro:rebot_arm_rs_link
       name="base_link" mesh="base_link.STL"
+      material="rs_base_black" rgba="${rs_base_black_rgba}"
       com="2.87641888266442E-06 -0.000122302488725115 0.0243376121934547"
       mass="1.1774"
       ixx="0.00133040" ixy="0.00000001" ixz="0.00000000"
       iyy="0.00213119" iyz="0.00000000" izz="0.00275877"/>
     <xacro:rebot_arm_rs_link
       name="link1" mesh="link1.STL"
+      material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"
       com="0.00817652280320541 0.00122584211922395 0.0331419658967293"
       mass="0.4655"
       ixx="0.00025207" ixy="0.00000000" ixz="-0.00002832"
       iyy="0.00015464" iyz="0.00000000" izz="0.00023416"/>
-    <xacro:rebot_arm_rs_link
-      name="link2" mesh="link2.STL"
-      com="-0.117864812717456 -0.00342226413942967 -0.0271551938501484"
-      mass="1.552"
-      ixx="0.00073374" ixy="-0.00000043" ixz="0.00000851"
-      iyy="0.01255987" iyz="0.00000128" izz="0.01281387"/>
-    <xacro:rebot_arm_rs_link
-      name="link3" mesh="link3.STL"
-      com="0.103427154487799 -0.0664137912104635 -0.0271068687716704"
-      mass="1.252"
-      ixx="0.00046807" ixy="-0.00003456" ixz="-0.00004260"
-      iyy="0.00632695" iyz="0.00000006" izz="0.00648221"/>
-    <xacro:rebot_arm_rs_link
-      name="link4" mesh="link4.STL"
-      com="0.0475544540775559 -0.0441113470158517 -0.0314111924918381"
-      mass="0.46"
-      ixx="0.00045986" ixy="0.00024219" ixz="-0.0"
-      iyy="0.00075258" iyz="-0.0" izz="0.00066742"/>
-    <xacro:rebot_arm_rs_link
-      name="link5" mesh="link5.STL"
-      com="0.0114400622356175 4.7907739316217E-06 0.0380487481818926"
-      mass="0.20120457182895"
-      ixx="7.34238025911107E-05" ixy="1.35700947009798E-08" ixz="-8.58146433770359E-07"
-      iyy="5.5153884237714E-05" iyz="-1.32742144977931E-08" izz="5.29920095811017E-05"/>
+
+    <link name="link2">
+      <xacro:rebot_arm_rs_inertial
+        com="-0.117864812717456 -0.00342226413942967 -0.0271551938501484"
+        mass="1.972"
+        ixx="0.00073374" ixy="-0.00000043" ixz="0.00000851"
+        iyy="0.01255987" iyz="0.00000128" izz="0.01281387"/>
+      <xacro:rebot_arm_rs_visual mesh="motor_2_3.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+      <xacro:rebot_arm_rs_collision mesh="link2.STL"/>
+    </link>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_cnc_visual"
+      mesh="cnc2.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_pla_black_visual"
+      mesh="pla2_black.STL" material="rs_pla_black" rgba="${rs_pla_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_pla_green_visual"
+      mesh="pla2_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+
+    <link name="link3">
+      <xacro:rebot_arm_rs_inertial
+        com="0.103427154487799 -0.0664137912104635 -0.0271068687716704"
+        mass="1.062"
+        ixx="0.00046807" ixy="-0.00003456" ixz="-0.00004260"
+        iyy="0.00632695" iyz="0.00000006" izz="0.00648221"/>
+      <xacro:rebot_arm_rs_visual mesh="cnc3.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+      <xacro:rebot_arm_rs_collision mesh="link3.STL"/>
+    </link>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_motor_visual"
+      mesh="motor_4.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_pla_black_visual"
+      mesh="pla3_black_without_seeed_badge.STL" material="rs_pla_black" rgba="${rs_pla_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_badge_visual"
+      mesh="pla3_seeed_badge_with_counters.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_wordmark_visual"
+      mesh="pla3_seeed_wordmark_backing.STL" material="rs_wordmark_black" rgba="${rs_wordmark_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_pla_green_visual"
+      mesh="pla3_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+
+    <link name="link4">
+      <xacro:rebot_arm_rs_inertial
+        com="0.0475544540775559 -0.0441113470158517 -0.0314111924918381"
+        mass="0.66"
+        ixx="0.00045986" ixy="0.00024219" ixz="-0.0"
+        iyy="0.00075258" iyz="-0.0" izz="0.00066742"/>
+      <xacro:rebot_arm_rs_visual mesh="motor_5.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+      <xacro:rebot_arm_rs_collision mesh="link4.STL"/>
+    </link>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link4" name="link4_cnc_visual"
+      mesh="cnc4.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+
+    <link name="link5">
+      <xacro:rebot_arm_rs_inertial
+        com="0.0114400622356175 4.7907739316217E-06 0.0380487481818926"
+        mass="0.150120457182895"
+        ixx="7.34238025911107E-05" ixy="1.35700947009798E-08" ixz="-8.58146433770359E-07"
+        iyy="5.5153884237714E-05" iyz="-1.32742144977931E-08" izz="5.29920095811017E-05"/>
+      <xacro:rebot_arm_rs_visual mesh="motor_6.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+      <xacro:rebot_arm_rs_collision mesh="link5.STL"/>
+    </link>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link5" name="link5_cnc_visual"
+      mesh="cnc5.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link5" name="link5_pla_green_visual"
+      mesh="pla5_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+
     <xacro:rebot_arm_rs_link
       name="link6" mesh="link6.STL"
+      material="rs_motor_black" rgba="${rs_motor_black_rgba}"
       com="1.80196022567525E-05 2.48334592051007E-08 0.00434805764057547"
-      mass="0.1"
+      mass="0.03"
       ixx="4.42273835852359E-06" ixy="3.16758463739482E-12" ixz="1.51852818442002E-10"
       iyy="4.37185522080034E-06" iyz="-2.21864017603015E-12" izz="8.54299378942051E-06"/>
 
     <joint name="joint1" type="revolute">
       <origin xyz="-0.00034283 -0.00098683 0.075" rpy="0 0 0"/>
       <parent link="base_link"/><child link="link1"/><axis xyz="0 0 -1"/>
-      <limit lower="-2.53" upper="2.53" effort="36" velocity="1.0"/>
+      <limit lower="-2.8" upper="2.8" effort="36" velocity="50"/>
     </joint>
     <joint name="joint2" type="revolute">
       <origin xyz="0.020343 0.027237 0.07" rpy="-1.5708 0 0"/>
       <parent link="link1"/><child link="link2"/><axis xyz="0 0 1"/>
-      <limit lower="0.0" upper="2.96" effort="36" velocity="1.0"/>
+      <limit lower="0" upper="3.14" effort="36" velocity="50"/>
     </joint>
     <joint name="joint3" type="revolute">
       <origin xyz="-0.236 0 0" rpy="0 0 0"/>
       <parent link="link2"/><child link="link3"/><axis xyz="0 0 -1"/>
-      <limit lower="0.0" upper="3.50" effort="36" velocity="1.0"/>
+      <limit lower="0" upper="3.14" effort="36" velocity="50"/>
     </joint>
     <joint name="joint4" type="revolute">
       <origin xyz="0.228 -0.072746 0.0045" rpy="0 0 0"/>
       <parent link="link3"/><child link="link4"/><axis xyz="0 0 -1"/>
-      <limit lower="-1.39" upper="1.57" effort="14" velocity="1.0"/>
+      <limit lower="-1.57" upper="1.57" effort="14" velocity="40"/>
     </joint>
     <joint name="joint5" type="revolute">
       <origin xyz="0.087 -0.048 -0.03075" rpy="-1.5708 0 0"/>
       <parent link="link4"/><child link="link5"/><axis xyz="0 0 -1"/>
-      <limit lower="-1.57" upper="1.57" effort="14" velocity="1.0"/>
+      <limit lower="-1.57" upper="1.57" effort="14" velocity="40"/>
     </joint>
     <joint name="joint6" type="revolute">
       <origin xyz="0.0365 0 0.048" rpy="0 1.5708 0"/>
       <parent link="link5"/><child link="link6"/><axis xyz="0 0 -1"/>
-      <limit lower="-1.57" upper="1.57" effort="14" velocity="1.0"/>
+      <limit lower="-3.14" upper="3.14" effort="14" velocity="40"/>
     </joint>
 
     <link name="tool0"/>

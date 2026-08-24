@@ -17,6 +17,9 @@ controller_manager:
     rebot_arm_rs_impedance_controller:
       type: mit_impedance_controller/MitImpedanceController
 
+    rebot_arm_rs_impedance_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
     rebot_arm_rs_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
@@ -79,6 +82,9 @@ rebot_arm_rs_impedance_controller:
     # Compliant physical-arm baseline. K and D are runtime adjustable.
     stiffness: [20.0, 15.0, 15.0, 8.0, 5.0, 3.0]
     damping_coefficients: [2.0, 4.0, 4.0, 3.0, 2.0, 1.5]
+    feedback:
+      # Bounds Kp * (q_ref - q) while retaining motor-side MIT feedback.
+      stiffness_torque_limit: [3.0, 4.0, 4.0, 1.5, 1.0, 0.6]
     reference:
       position_rate_limit: [0.5, 0.3, 0.3, 0.5, 0.5, 0.5]
       velocity_limit: [1.0, 1.0, 1.0, 1.5, 1.5, 1.5]
@@ -99,6 +105,41 @@ rebot_arm_rs_impedance_controller:
       margin: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
       stiffness: [3.0, 8.0, 8.0, 3.0, 3.0, 3.0]
       torque_limit: [1.0, 3.0, 3.0, 1.0, 1.0, 1.0]
+
+rebot_arm_rs_impedance_trajectory_controller:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    command_joints:
+      - rebot_arm_rs_impedance_controller/joint1
+      - rebot_arm_rs_impedance_controller/joint2
+      - rebot_arm_rs_impedance_controller/joint3
+      - rebot_arm_rs_impedance_controller/joint4
+      - rebot_arm_rs_impedance_controller/joint5
+      - rebot_arm_rs_impedance_controller/joint6
+    command_interfaces: [position, velocity]
+    state_interfaces: [position, velocity]
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    interpolate_from_desired_state: true
+    constraints:
+      stopped_velocity_tolerance: 0.15
+      goal_time: 2.0
+      joint1: {trajectory: 0.25, goal: 0.05}
+      joint2: {trajectory: 0.25, goal: 0.03}
+      joint3: {trajectory: 0.25, goal: 0.04}
+      joint4: {trajectory: 0.25, goal: 0.04}
+      joint5: {trajectory: 0.25, goal: 0.04}
+      joint6: {trajectory: 0.25, goal: 0.05}
+
+rebot_arm_rs_impedance_trajectory_guard:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    state_topic: /rebot_arm_rs_impedance_controller/state
+    trajectory_action: /rebot_arm_rs_impedance_trajectory_controller/follow_joint_trajectory
+    position_error_threshold: [0.12, 0.12, 0.12, 0.15, 0.15, 0.18]
+    stationary_velocity_threshold: [0.22, 0.22, 0.22, 0.12, 0.12, 0.12]
+    blocking_duration: 0.35
 
 rebot_arm_rs_trajectory_controller:
   ros__parameters:

@@ -46,6 +46,13 @@ def generate_launch_description():
         output="both",
         parameters=[robot_description],
     )
+    impedance_trajectory_guard = Node(
+        package="mit_impedance_controller",
+        executable="impedance_trajectory_guard",
+        name="rebot_arm_rs_impedance_trajectory_guard",
+        output="screen",
+        parameters=[controller_file],
+    )
     joint_state_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -89,6 +96,7 @@ def generate_launch_description():
         arguments=[
             "rebot_arm_rs_damping_controller",
             "rebot_arm_rs_impedance_controller",
+            "rebot_arm_rs_impedance_trajectory_controller",
             "-c", "/controller_manager",
             "--inactive",
         ],
@@ -101,6 +109,7 @@ def generate_launch_description():
         arguments=[
             "rebot_arm_rs_damping_controller",
             "rebot_arm_rs_impedance_controller",
+            "rebot_arm_rs_impedance_trajectory_controller",
             "-c", "/controller_manager",
             "--inactive",
         ],
@@ -113,6 +122,7 @@ def generate_launch_description():
             DeclareLaunchArgument("can_interface", default_value="can1"),
             DeclareLaunchArgument("activate_trajectory_controller", default_value="false"),
             robot_state_publisher,
+            impedance_trajectory_guard,
             control_node,
             joint_state_spawner,
             RegisterEventHandler(

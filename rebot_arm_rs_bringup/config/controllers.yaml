@@ -86,7 +86,9 @@ rebot_arm_rs_impedance_controller:
       # Bounds Kp * (q_ref - q) while retaining motor-side MIT feedback.
       stiffness_torque_limit: [3.0, 4.0, 4.0, 1.5, 1.0, 0.6]
     reference:
-      position_rate_limit: [0.5, 0.3, 0.3, 0.5, 0.5, 0.5]
+      # Operational equilibrium-motion limits. Joint2/3 remain lower because
+      # they carry most of the arm inertia.
+      position_rate_limit: [1.0, 0.6, 0.6, 1.0, 1.0, 1.0]
       velocity_limit: [1.0, 1.0, 1.0, 1.5, 1.5, 1.5]
     state_publish_rate: 50.0
     gravity_compensation:

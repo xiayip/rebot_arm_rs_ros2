@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="rs_base_black_rgba" value="0.055 0.065 0.060 1"/>
+  <xacro:property name="rs_motor_black_rgba" value="0.045 0.052 0.049 1"/>
+  <xacro:property name="rs_pla_black_rgba" value="0.090 0.106 0.102 1"/>
+  <xacro:property name="rs_wordmark_black_rgba" value="0.010 0.012 0.011 1"/>
+  <xacro:property name="rs_anodized_silver_rgba" value="0.720 0.760 0.730 1"/>
+  <xacro:property name="rs_seeed_green_rgba" value="0.725 0.835 0.118 1"/>
+
+  <material name="rs_base_black">
+    <color rgba="${rs_base_black_rgba}"/>
+  </material>
+  <material name="rs_motor_black">
+    <color rgba="${rs_motor_black_rgba}"/>
+  </material>
+  <material name="rs_pla_black">
+    <color rgba="${rs_pla_black_rgba}"/>
+  </material>
+  <material name="rs_wordmark_black">
+    <color rgba="${rs_wordmark_black_rgba}"/>
+  </material>
+  <material name="rs_anodized_silver">
+    <color rgba="${rs_anodized_silver_rgba}"/>
+  </material>
+  <material name="rs_seeed_green">
+    <color rgba="${rs_seeed_green_rgba}"/>
+  </material>
+
+  <xacro:macro name="rebot_arm_rs_visual_component" params="parent name mesh material rgba">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
+        </geometry>
+        <material name="${material}">
+          <color rgba="${rgba}"/>
+        </material>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_visuals">
+    <xacro:rebot_arm_rs_visual_component
+      parent="base_link" name="base_link_visual"
+      mesh="base_link.STL" material="rs_base_black" rgba="${rs_base_black_rgba}"/>
+
+    <xacro:rebot_arm_rs_visual_component
+      parent="link1" name="link1_visual"
+      mesh="link1.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_motor_visual"
+      mesh="motor_2_3.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_cnc_visual"
+      mesh="cnc2.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_pla_black_visual"
+      mesh="pla2_black.STL" material="rs_pla_black" rgba="${rs_pla_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link2" name="link2_pla_green_visual"
+      mesh="pla2_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_cnc_visual"
+      mesh="cnc3.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_motor_visual"
+      mesh="motor_4.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_pla_black_visual"
+      mesh="pla3_black_without_seeed_badge.STL" material="rs_pla_black" rgba="${rs_pla_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_badge_visual"
+      mesh="pla3_seeed_badge_with_counters.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_wordmark_visual"
+      mesh="pla3_seeed_wordmark_backing.STL" material="rs_wordmark_black" rgba="${rs_wordmark_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link3" name="link3_pla_green_visual"
+      mesh="pla3_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+
+    <xacro:rebot_arm_rs_visual_component
+      parent="link4" name="link4_motor_visual"
+      mesh="motor_5.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link4" name="link4_cnc_visual"
+      mesh="cnc4.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+
+    <xacro:rebot_arm_rs_visual_component
+      parent="link5" name="link5_motor_visual"
+      mesh="motor_6.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link5" name="link5_cnc_visual"
+      mesh="cnc5.STL" material="rs_anodized_silver" rgba="${rs_anodized_silver_rgba}"/>
+    <xacro:rebot_arm_rs_visual_component
+      parent="link5" name="link5_pla_green_visual"
+      mesh="pla5_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
+
+    <xacro:rebot_arm_rs_visual_component
+      parent="link6" name="link6_visual"
+      mesh="link6.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
+  </xacro:macro>
+</robot>

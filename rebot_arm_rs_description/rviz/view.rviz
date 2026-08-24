@@ -72,8 +72,6 @@ Visualization Manager:
           Value: true
         link6:
           Value: true
-        tool0:
-          Value: true
       Marker Scale: 0.30000001192092896
       Name: TF
       Show Arrows: true
@@ -87,8 +85,7 @@ Visualization Manager:
                 link4:
                   link5:
                     link6:
-                      tool0:
-                        {}
+                      {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -144,10 +141,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        tool0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false

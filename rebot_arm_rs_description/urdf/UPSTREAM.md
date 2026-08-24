@@ -18,8 +18,8 @@ parameters, effort limits, position limits, URDF velocity limits, collision mesh
 material assignments, and palette RGBA values match the upstream model numerically.
 
 The upstream source includes a motorized gripper. This robot currently has no gripper, so the local
-description ends at a massless `tool0` fixed to `link6`. Its transform is identical to upstream
-`j_gripper_end`; gripper links, inertials, joints, and meshes are intentionally omitted.
+description ends at `link6`; the upstream gripper root, gripper links, inertials, joints, and meshes
+are intentionally omitted.
 
 ## Local ROS 2 extensions
 
@@ -32,8 +32,8 @@ Each visual repeats its palette RGBA inline as well as referencing the shared ma
 intentional because URDF consumers differ in whether they resolve robot-level materials into
 visual-level objects.
 
-Jazzy RViz loads every entry in a link's `visual_array`, but resolves an empty per-entry material
-name back to the link's primary visual material. Secondary split meshes are therefore represented as
-zero-offset, fixed, visual-only child links. Each rendered link has exactly one visual and retains its
-own upstream material, while the physical six-axis links keep all upstream inertial and collision
-data.
+Visual definitions are isolated in `rebot_arm_rs_visuals.urdf.xacro`. Jazzy RViz loads every entry
+in a link's `visual_array`, but resolves an empty per-entry material name back to the link's primary
+visual material. The split meshes are therefore represented as zero-offset, fixed, visual-only child
+links. Each rendered link has exactly one visual and retains its own upstream material, while the
+physical six-axis macro contains only inertial, collision, and joint data.

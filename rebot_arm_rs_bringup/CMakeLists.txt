@@ -3,6 +3,5 @@ project(rebot_arm_rs_bringup)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config launch scripts DESTINATION share/${PROJECT_NAME})
 ament_package()
-

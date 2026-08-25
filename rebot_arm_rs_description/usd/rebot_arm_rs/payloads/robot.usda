@@ -1,0 +1,379 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.3"
+    }
+    defaultPrim = "rebot_arm_rs"
+    doc = """Generated from Composed Stage of root layer /tmp/tmp90piu_lx/rebot_arm_rs.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s_q1axmo/usdex_rebot_arm_rs/rebot_arm_rs.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s_q1axmo/temp_rebot_arm_rs/rebot_arm_rs.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+over "rebot_arm_rs" (
+    prepend apiSchemas = ["IsaacRobotAPI"]
+)
+{
+    prepend rel isaac:physics:robotJoints = [
+        </rebot_arm_rs/Physics/link3_cnc_visual_joint>,
+        </rebot_arm_rs/Physics/link3_motor_visual_joint>,
+        </rebot_arm_rs/Physics/link3_pla_black_visual_joint>,
+        </rebot_arm_rs/Physics/link3_badge_visual_joint>,
+        </rebot_arm_rs/Physics/link3_wordmark_visual_joint>,
+        </rebot_arm_rs/Physics/link3_pla_green_visual_joint>,
+        </rebot_arm_rs/Physics/joint3>,
+        </rebot_arm_rs/Physics/joint4>,
+        </rebot_arm_rs/Physics/link2_motor_visual_joint>,
+        </rebot_arm_rs/Physics/link2_cnc_visual_joint>,
+        </rebot_arm_rs/Physics/link2_pla_black_visual_joint>,
+        </rebot_arm_rs/Physics/link2_pla_green_visual_joint>,
+        </rebot_arm_rs/Physics/joint2>,
+        </rebot_arm_rs/Physics/link1_visual_joint>,
+        </rebot_arm_rs/Physics/joint1>,
+        </rebot_arm_rs/Physics/root_joint>,
+        </rebot_arm_rs/Physics/base_link_visual_joint>,
+        </rebot_arm_rs/Physics/link4_motor_visual_joint>,
+        </rebot_arm_rs/Physics/link4_cnc_visual_joint>,
+        </rebot_arm_rs/Physics/joint5>,
+        </rebot_arm_rs/Physics/link5_motor_visual_joint>,
+        </rebot_arm_rs/Physics/link5_cnc_visual_joint>,
+        </rebot_arm_rs/Physics/link5_pla_green_visual_joint>,
+        </rebot_arm_rs/Physics/joint6>,
+        </rebot_arm_rs/Physics/link6_visual_joint>,
+    ]
+    prepend rel isaac:physics:robotLinks = [
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link3_cnc_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link3_motor_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link3_pla_black_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link3_badge_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link3_wordmark_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link3_pla_green_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link2_motor_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link2_cnc_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link2_pla_black_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link2_pla_green_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1>,
+        </rebot_arm_rs/Geometry/base_link/link1/link1_visual>,
+        </rebot_arm_rs/Geometry/base_link>,
+        </rebot_arm_rs/Geometry/base_link/base_link_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link4_motor_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link4_cnc_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link5_motor_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link5_cnc_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link5_pla_green_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6/link6_visual>,
+    ]
+    token isaac:robotType = "Default"
+
+    over "Geometry"
+    {
+        over "base_link" (
+            prepend apiSchemas = ["IsaacLinkAPI"]
+        )
+        {
+            over "base_link_visual" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+            }
+
+            over "link1" (
+                prepend apiSchemas = ["IsaacLinkAPI"]
+            )
+            {
+                over "link1_visual" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                }
+
+                over "link2" (
+                    prepend apiSchemas = ["IsaacLinkAPI"]
+                )
+                {
+                    over "link2_motor_visual" (
+                        prepend apiSchemas = ["IsaacLinkAPI"]
+                    )
+                    {
+                    }
+
+                    over "link2_cnc_visual" (
+                        prepend apiSchemas = ["IsaacLinkAPI"]
+                    )
+                    {
+                    }
+
+                    over "link2_pla_black_visual" (
+                        prepend apiSchemas = ["IsaacLinkAPI"]
+                    )
+                    {
+                    }
+
+                    over "link2_pla_green_visual" (
+                        prepend apiSchemas = ["IsaacLinkAPI"]
+                    )
+                    {
+                    }
+
+                    over "link3" (
+                        prepend apiSchemas = ["IsaacLinkAPI"]
+                    )
+                    {
+                        over "link3_cnc_visual" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                        }
+
+                        over "link3_motor_visual" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                        }
+
+                        over "link3_pla_black_visual" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                        }
+
+                        over "link3_badge_visual" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                        }
+
+                        over "link3_wordmark_visual" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                        }
+
+                        over "link3_pla_green_visual" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                        }
+
+                        over "link4" (
+                            prepend apiSchemas = ["IsaacLinkAPI"]
+                        )
+                        {
+                            over "link4_motor_visual" (
+                                prepend apiSchemas = ["IsaacLinkAPI"]
+                            )
+                            {
+                            }
+
+                            over "link4_cnc_visual" (
+                                prepend apiSchemas = ["IsaacLinkAPI"]
+                            )
+                            {
+                            }
+
+                            over "link5" (
+                                prepend apiSchemas = ["IsaacLinkAPI"]
+                            )
+                            {
+                                over "link5_motor_visual" (
+                                    prepend apiSchemas = ["IsaacLinkAPI"]
+                                )
+                                {
+                                }
+
+                                over "link5_cnc_visual" (
+                                    prepend apiSchemas = ["IsaacLinkAPI"]
+                                )
+                                {
+                                }
+
+                                over "link5_pla_green_visual" (
+                                    prepend apiSchemas = ["IsaacLinkAPI"]
+                                )
+                                {
+                                }
+
+                                over "link6" (
+                                    prepend apiSchemas = ["IsaacLinkAPI"]
+                                )
+                                {
+                                    over "link6_visual" (
+                                        prepend apiSchemas = ["IsaacLinkAPI"]
+                                    )
+                                    {
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    over "Physics"
+    {
+        over "root_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "base_link_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link1_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link2_motor_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link2_cnc_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link2_pla_black_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link2_pla_green_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link3_cnc_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link3_motor_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link3_pla_black_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link3_badge_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link3_wordmark_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link3_pla_green_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link4_motor_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link4_cnc_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link5_motor_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link5_cnc_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link5_pla_green_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "link6_visual_joint" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "joint1" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "joint2" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "joint3" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "joint4" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "joint5" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "joint6" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+    }
+}
+

@@ -108,6 +108,12 @@ prevents package discovery from scanning unrelated Python sources.
 # No physical hardware: validates the description and controller stack.
 ros2 launch rebot_arm_rs_bringup mock.launch.py
 
+# Open the checked-in robot asset with Isaac Sim and enable its ROS 2 bridge.
+ros2 launch rebot_arm_rs_bringup isaac_sim.launch.py
+
+# The same asset can be started without a GUI for launch and bridge validation.
+ros2 launch rebot_arm_rs_bringup isaac_sim.launch.py headless:=true
+
 # Physical CAN bus; stopped motors enable, and Ctrl-C retains the last motor-side hold command.
 ros2 launch rebot_arm_rs_bringup real_world.launch.py can_interface:=can1
 
@@ -149,6 +155,11 @@ ros2 control switch_controllers \
 # Inspect the desired/limited equilibrium, MIT gains, and torque decomposition.
 ros2 topic echo /rebot_arm_rs_impedance_controller/state
 ```
+
+The current Isaac USD contains the imported articulation and joint drives. The ROS 2 bridge is
+loaded by the launch file, but a joint-state/command Action Graph is not yet authored in the USD;
+the launch is therefore an asset and physics-model entry point, not yet a ros2_control backend.
+See `rebot_arm_rs_description/usd/README.md` for the explicit URDF-to-USD regeneration workflow.
 
 ## Source references
 

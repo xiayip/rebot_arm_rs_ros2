@@ -4,13 +4,13 @@
         string creator = "URDF USD Converter v0.1.3"
     }
     defaultPrim = "rebot_arm_rs"
-    doc = """Generated from Composed Stage of root layer /tmp/tmp90piu_lx/rebot_arm_rs.usdc
+    doc = """Generated from Composed Stage of root layer /tmp/tmpa7vae0hv/rebot_arm_rs.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s_q1axmo/usdex_rebot_arm_rs/rebot_arm_rs.usdc
+Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s0y2eqkj/usdex_rebot_arm_rs/rebot_arm_rs.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s_q1axmo/temp_rebot_arm_rs/rebot_arm_rs.usd
+Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s0y2eqkj/temp_rebot_arm_rs/rebot_arm_rs.usd
 """
     kilogramsPerUnit = 1
     metersPerUnit = 1
@@ -46,7 +46,7 @@ over "rebot_arm_rs" (
         </rebot_arm_rs/Physics/link5_cnc_visual_joint>,
         </rebot_arm_rs/Physics/link5_pla_green_visual_joint>,
         </rebot_arm_rs/Physics/joint6>,
-        </rebot_arm_rs/Physics/link6_visual_joint>,
+        </rebot_arm_rs/Physics/rebot_arm_rs_stock_flange_link_joint>,
     ]
     prepend rel isaac:physics:robotLinks = [
         </rebot_arm_rs/Geometry/base_link/link1/link2/link3>,
@@ -73,7 +73,7 @@ over "rebot_arm_rs" (
         </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link5_cnc_visual>,
         </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link5_pla_green_visual>,
         </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6>,
-        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6/link6_visual>,
+        </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6/rebot_arm_rs_stock_flange_link>,
     ]
     token isaac:robotType = "Default"
 
@@ -209,10 +209,15 @@ over "rebot_arm_rs" (
                                     prepend apiSchemas = ["IsaacLinkAPI"]
                                 )
                                 {
-                                    over "link6_visual" (
+                                    over "rebot_arm_rs_stock_flange_link" (
                                         prepend apiSchemas = ["IsaacLinkAPI"]
                                     )
                                     {
+                                        over "tool0" (
+                                            prepend apiSchemas = ["IsaacSiteAPI"]
+                                        )
+                                        {
+                                        }
                                     }
                                 }
                             }
@@ -333,12 +338,6 @@ over "rebot_arm_rs" (
         {
         }
 
-        over "link6_visual_joint" (
-            prepend apiSchemas = ["IsaacJointAPI"]
-        )
-        {
-        }
-
         over "joint1" (
             prepend apiSchemas = ["IsaacJointAPI"]
         )
@@ -370,6 +369,12 @@ over "rebot_arm_rs" (
         }
 
         over "joint6" (
+            prepend apiSchemas = ["IsaacJointAPI"]
+        )
+        {
+        }
+
+        over "rebot_arm_rs_stock_flange_link_joint" (
             prepend apiSchemas = ["IsaacJointAPI"]
         )
         {

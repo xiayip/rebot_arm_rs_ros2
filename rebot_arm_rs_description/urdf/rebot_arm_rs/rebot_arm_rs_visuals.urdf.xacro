@@ -103,8 +103,5 @@
       parent="link5" name="link5_pla_green_visual"
       mesh="pla5_green.STL" material="rs_seeed_green" rgba="${rs_seeed_green_rgba}"/>
 
-    <xacro:rebot_arm_rs_visual_component
-      parent="link6" name="link6_visual"
-      mesh="link6.STL" material="rs_motor_black" rgba="${rs_motor_black_rgba}"/>
   </xacro:macro>
 </robot>

@@ -20,6 +20,18 @@ The six-axis URDF inertial data and aggregate meshes are synchronized from Seeed
 RS CAD export. See `rebot_arm_rs_description/urdf/UPSTREAM.md` for the pinned upstream commit,
 checksums, and the no-gripper adaptation policy.
 
+## Description composition
+
+The reusable `rebot_arm_rs` xacro macro describes the six-axis arm core and ends at the stable
+`link6` output frame. The stock physical flange is a separate
+`rebot_arm_rs_stock_flange` macro containing its own visual, collision, mass, inertia, fixed
+attachment, and `tool0` frame. The standalone `rebot_arm_rs.urdf.xacro` composes both macros, so
+its default appearance and dynamics include the stock flange.
+
+Robot-specific packages can include only the arm core and attach another flange to `link6`. This
+keeps `joint6`, TF names, and ros2_control interfaces stable while allowing the complete physical
+flange model to change without adding downstream dependencies to this repository.
+
 ## Dependency
 
 The ROS 2 workspace must also contain the `shared_can_hardware` repository. It provides:

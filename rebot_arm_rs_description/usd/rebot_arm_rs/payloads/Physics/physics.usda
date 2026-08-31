@@ -4,16 +4,16 @@
         string creator = "URDF USD Converter v0.1.3"
     }
     defaultPrim = "rebot_arm_rs"
-    doc = """Generated from Composed Stage of root layer /tmp/tmp90piu_lx/rebot_arm_rs.usdc
+    doc = """Generated from Composed Stage of root layer /tmp/tmpa7vae0hv/rebot_arm_rs.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s_q1axmo/usdex_rebot_arm_rs/rebot_arm_rs.usdc
+Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s0y2eqkj/usdex_rebot_arm_rs/rebot_arm_rs.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s_q1axmo/temp_rebot_arm_rs/rebot_arm_rs.usd
+Generated from Composed Stage of root layer /tmp/urdf_import_rebot_arm_rs_s0y2eqkj/temp_rebot_arm_rs/rebot_arm_rs.usd
 
 
-Generated from Composed Stage of root layer /workspaces/zephyr-dev/zephyr_ws/src/zephyr_common/rebot_arm_rs_ros2/rebot_arm_rs_description/usd/rebot_arm_rs/payloads/base.usd
+Generated from Composed Stage of root layer /workspaces/zephyr-dev/zephyr_ws/src/zephyr_common/rebot_arm_rs_ros2/rebot_arm_rs_description/usd/.rebot_arm_rs_isaac_17pbgc/rebot_arm_rs/payloads/base.usd
 """
     kilogramsPerUnit = 1
     metersPerUnit = 1
@@ -185,18 +185,17 @@ over "rebot_arm_rs"
                                 }
 
                                 over "link6" (
-                                    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+                                    prepend apiSchemas = ["PhysicsRigidBodyAPI"]
                                 )
                                 {
-                                    point3f physics:centerOfMass = (0.000018019602, 2.483346e-8, 0.004348058)
-                                    float3 physics:diagonalInertia = (0.000004371855, 0.000004422738, 0.000008542994)
-                                    float physics:mass = 0.03
-                                    quatf physics:principalAxes = (0.000013218725, 0.7070848, 0.70712876, -0.000012841821)
-
-                                    over "link6_visual" (
-                                        prepend apiSchemas = ["PhysicsRigidBodyAPI"]
+                                    over "rebot_arm_rs_stock_flange_link" (
+                                        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
                                     )
                                     {
+                                        point3f physics:centerOfMass = (0.000018019602, 2.483346e-8, 0.004348058)
+                                        float3 physics:diagonalInertia = (0.000004371855, 0.000004422738, 0.000008542994)
+                                        float physics:mass = 0.03
+                                        quatf physics:principalAxes = (0.000013218725, 0.7070848, 0.70712876, -0.000012841821)
                                     }
                                 }
                             }
@@ -563,12 +562,12 @@ over "rebot_arm_rs"
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsFixedJoint "link6_visual_joint"
+        def PhysicsFixedJoint "rebot_arm_rs_stock_flange_link_joint"
         {
             custom rel physics:body0
             prepend rel physics:body0 = </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6>
             custom rel physics:body1
-            prepend rel physics:body1 = </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6/link6_visual>
+            prepend rel physics:body1 = </rebot_arm_rs/Geometry/base_link/link1/link2/link3/link4/link5/link6/rebot_arm_rs_stock_flange_link>
             point3f physics:localPos0 = (0, -2.1175824e-22, -2.7755576e-17)
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (1, -1.7427073e-23, -1.2283682e-17, -1.0780863e-22)

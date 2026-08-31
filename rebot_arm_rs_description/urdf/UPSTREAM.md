@@ -13,13 +13,16 @@ Studio's ROS 2 repository:
 - Upstream package license declaration: `Apache-2.0`
 - Synchronization date: 2026-08-21
 
-For `base_link` through `link6`, joint origins, axes, parent/child relationships, link inertial
+For `base_link` through `link5`, joint origins, axes, parent/child relationships, link inertial
 parameters, effort limits, position limits, URDF velocity limits, collision meshes, visual meshes,
-material assignments, and palette RGBA values match the upstream model numerically.
+material assignments, and palette RGBA values match the upstream model numerically. The upstream
+`link6` body, mesh, and inertial parameters are preserved numerically in the separate
+`rebot_arm_rs_stock_flange` macro. Its fixed attachment to the empty `link6` output frame is
+kinematically and dynamically equivalent to the original model while allowing flange replacement.
 
-The upstream source includes a motorized gripper. This robot currently has no gripper, so the local
-description ends at `link6`; the upstream gripper root, gripper links, inertials, joints, and meshes
-are intentionally omitted.
+The upstream source includes a motorized gripper. This robot currently has no gripper, so the
+standalone description ends at the stock flange's `tool0` frame; the upstream gripper root,
+gripper links, inertials, joints, and meshes are intentionally omitted.
 
 ## Local ROS 2 extensions
 
@@ -32,8 +35,10 @@ Each visual repeats its palette RGBA inline as well as referencing the shared ma
 intentional because URDF consumers differ in whether they resolve robot-level materials into
 visual-level objects.
 
-Visual definitions are isolated in `rebot_arm_rs_visuals.urdf.xacro`. Jazzy RViz loads every entry
+Arm visual definitions are isolated in `rebot_arm_rs_visuals.urdf.xacro`, while the replaceable
+stock flange owns its visual directly. Jazzy RViz loads every entry
 in a link's `visual_array`, but resolves an empty per-entry material name back to the link's primary
 visual material. The split meshes are therefore represented as zero-offset, fixed, visual-only child
 links. Each rendered link has exactly one visual and retains its own upstream material, while the
-physical six-axis macro contains only inertial, collision, and joint data.
+physical six-axis macro contains only inertial, collision, and joint data plus the stable,
+massless `link6` output frame.

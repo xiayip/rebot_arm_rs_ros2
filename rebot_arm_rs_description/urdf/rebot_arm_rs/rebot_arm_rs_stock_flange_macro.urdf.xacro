@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    Default flange supplied with the upstream reBot Arm RS model. Keeping it
+    separate from link6 lets downstream robots replace the complete physical
+    flange without changing the six-axis kinematic or ros2_control interface.
+  -->
+  <xacro:macro name="rebot_arm_rs_stock_flange"
+               params="parent child:=rebot_arm_rs_stock_flange_link tool0:=tool0">
+    <link name="${child}">
+      <inertial>
+        <origin xyz="1.80196022567525E-05 2.48334592051007E-08 0.00434805764057547"
+                rpy="0 0 0"/>
+        <mass value="0.03"/>
+        <inertia
+          ixx="4.42273835852359E-06" ixy="3.16758463739482E-12" ixz="1.51852818442002E-10"
+          iyy="4.37185522080034E-06" iyz="-2.21864017603015E-12" izz="8.54299378942051E-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/link6.STL"/>
+        </geometry>
+        <material name="rs_motor_black">
+          <color rgba="0.045 0.052 0.049 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/link6.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${child}_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+    </joint>
+
+    <!-- The stock mesh's outward mounting surface is at z = 9 mm. -->
+    <link name="${tool0}"/>
+    <joint name="${tool0}_joint" type="fixed">
+      <origin xyz="0 0 0.009" rpy="0 0 0"/>
+      <parent link="${child}"/>
+      <child link="${tool0}"/>
+    </joint>
+  </xacro:macro>
+</robot>

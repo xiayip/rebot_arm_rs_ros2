@@ -84,12 +84,8 @@
       <xacro:rebot_arm_rs_collision mesh="link5.STL"/>
     </link>
 
-    <xacro:rebot_arm_rs_link
-      name="link6" mesh="link6.STL"
-      com="1.80196022567525E-05 2.48334592051007E-08 0.00434805764057547"
-      mass="0.03"
-      ixx="4.42273835852359E-06" ixy="3.16758463739482E-12" ixz="1.51852818442002E-10"
-      iyy="4.37185522080034E-06" iyz="-2.21864017603015E-12" izz="8.54299378942051E-06"/>
+    <!-- Stable sixth-axis output frame. A flange variant is attached here. -->
+    <link name="link6"/>
 
     <xacro:rebot_arm_rs_visuals/>
 

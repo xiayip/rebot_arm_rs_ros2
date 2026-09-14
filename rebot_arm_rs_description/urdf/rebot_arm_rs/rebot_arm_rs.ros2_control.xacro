@@ -42,6 +42,19 @@
     </joint>
   </xacro:macro>
 
+  <xacro:macro name="rebot_arm_rs_isaac_joint_interfaces" params="name lower upper">
+    <joint name="${name}">
+      <command_interface name="position">
+        <param name="min">${lower}</param>
+        <param name="max">${upper}</param>
+        <param name="initial_value">0.0</param>
+      </command_interface>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
+    </joint>
+  </xacro:macro>
+
   <xacro:macro name="rebot_arm_rs_ros2_control" params="name use_mock_hardware mock_sensor_commands can_interface">
     <ros2_control name="${name}" type="system">
       <hardware>
@@ -68,6 +81,26 @@
       <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
       <xacro:rebot_arm_rs_joint_interfaces name="joint5" motor_id="0x05" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
       <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-3.14" upper="3.14" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
+    </ros2_control>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_isaac_ros2_control" params="name">
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <plugin>topic_based_ros2_control/TopicBasedSystem</plugin>
+        <param name="joint_commands_topic">/rebot_arm_rs/isaac_joint_commands</param>
+        <param name="joint_states_topic">/rebot_arm_rs/isaac_joint_states</param>
+        <param name="trigger_joint_command_threshold">-1.0</param>
+        <param name="sum_wrapped_joint_states">false</param>
+        <param name="publish_full_joint_command_arrays">true</param>
+      </hardware>
+
+      <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint1" lower="-2.8" upper="2.8"/>
+      <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint2" lower="0.0" upper="3.14"/>
+      <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint3" lower="0.0" upper="3.14"/>
+      <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint4" lower="-1.57" upper="1.57"/>
+      <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint5" lower="-1.57" upper="1.57"/>
+      <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint6" lower="-3.14" upper="3.14"/>
     </ros2_control>
   </xacro:macro>
 </robot>

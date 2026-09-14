@@ -10,10 +10,14 @@
 namespace rebot_robstride_protocol {
 namespace {
 
-constexpr std::uint16_t kRunMode = 0x7005;
-constexpr std::uint16_t kMechanicalPosition = 0x7019;
-constexpr std::uint16_t kFilteredCurrent = 0x701A;
+using codec::parameter::kFilteredCurrent;
+using codec::parameter::kMechanicalPosition;
+using codec::parameter::kRunMode;
 constexpr double kPeakToRms = 0.70710678118654752440;
+constexpr auto kStartupFeedbackFreshness = std::chrono::milliseconds(100);
+constexpr auto kStartupStableDuration = std::chrono::milliseconds(30);
+constexpr double kStartupStablePositionSpan = 0.003;
+constexpr double kStartupMaximumDisplacement = 0.025;
 
 double torque_constant_for_model(const std::string &model) {
   if (model == "rs-06") {
@@ -133,6 +137,8 @@ void RobStrideProtocol::configure(
 }
 
 void RobStrideProtocol::reset_state() {
+  enable_check_started_ = false;
+  enable_check_start_ = {};
   for (auto &device : devices_) {
     device.position = 0.0;
     device.velocity = 0.0;
@@ -152,6 +158,10 @@ void RobStrideProtocol::reset_state() {
     device.filtered_current_received = false;
     device.run_mode_received = false;
     device.faulted = false;
+    device.last_status = {};
+    device.stable_since = {};
+    device.stable_samples = 0;
+    device.startup_moved = false;
   }
 }
 
@@ -198,7 +208,7 @@ std::vector<std::string> RobStrideProtocol::missing_initial_states() const {
 
 bool RobStrideProtocol::process_frame(
     const shared_can_interface::v1::CanFrame &frame,
-    std::chrono::steady_clock::time_point /*timestamp*/) {
+    std::chrono::steady_clock::time_point timestamp) {
   if (!frame.extended) {
     return false;
   }
@@ -253,6 +263,9 @@ bool RobStrideProtocol::process_frame(
   if (!status) {
     return false;
   }
+  if (device->status_received && timestamp <= device->last_status) {
+    return true;
+  }
   device->position = device->direction * status->position + device->offset;
   device->velocity = device->direction * status->velocity;
   device->effort = device->direction * status->torque;
@@ -263,12 +276,107 @@ bool RobStrideProtocol::process_frame(
   device->faulted = status->uncalibrated || status->stall ||
                     status->magnetic_encoder_fault || status->overtemperature ||
                     status->overcurrent || status->undervoltage;
+  if (enable_check_started_ && timestamp >= enable_check_start_ &&
+      timestamp > device->last_status && device->run_mode == 0U) {
+    if (device->mode_state == 0U &&
+        std::abs(device->position - device->check_initial_position) >
+            kStartupMaximumDisplacement) {
+      device->startup_moved = true;
+    }
+    // Empirical guard for the observed RS firmware startup placeholder, not
+    // a manufacturer-defined ready bit. An exact 0-C cold motor is ambiguous
+    // and deliberately cannot pass this gate; do not auto-reset it.
+    const bool stable_candidate = device->mode_state == 0U &&
+                                  !device->faulted && !device->startup_moved &&
+                                  device->temperature_c > 0.0 &&
+                                  std::abs(device->velocity) <= 0.5;
+    if (!stable_candidate) {
+      device->stable_samples = 0;
+    } else {
+      const double q_min =
+          std::min(device->stable_position_min, device->position);
+      const double q_max =
+          std::max(device->stable_position_max, device->position);
+      const double t_min =
+          std::min(device->stable_temperature_min, device->temperature_c);
+      const double t_max =
+          std::max(device->stable_temperature_max, device->temperature_c);
+      if (device->stable_samples == 0 ||
+          timestamp - device->last_status > kStartupFeedbackFreshness ||
+          q_max - q_min > kStartupStablePositionSpan || t_max - t_min > 1.0) {
+        device->stable_since = timestamp;
+        device->stable_samples = 1;
+        device->stable_position_min = device->stable_position_max =
+            device->position;
+        device->stable_temperature_min = device->stable_temperature_max =
+            device->temperature_c;
+      } else {
+        device->stable_samples =
+            std::min<std::size_t>(device->stable_samples + 1, 3);
+        device->stable_position_min = q_min;
+        device->stable_position_max = q_max;
+        device->stable_temperature_min = t_min;
+        device->stable_temperature_max = t_max;
+      }
+    }
+  }
+  device->last_status = timestamp;
   return true;
 }
 
 std::optional<shared_can_interface::v1::CanFrame>
 RobStrideProtocol::periodic_request() {
   return std::nullopt;
+}
+
+void RobStrideProtocol::begin_enable_check(
+    std::chrono::steady_clock::time_point now) {
+  enable_check_started_ = true;
+  enable_check_start_ = now;
+  for (auto &device : devices_) {
+    device.status_received = false;
+    device.last_status = {};
+    device.stable_samples = 0;
+    device.startup_moved = false;
+    device.check_initial_position = device.position;
+  }
+}
+
+std::vector<std::string> RobStrideProtocol::pending_enable_states(
+    std::chrono::steady_clock::time_point now) const {
+  std::vector<std::string> pending;
+  for (const auto &device : devices_) {
+    // Non-MIT modes retain their existing mode-switch sequence. The repeated
+    // MIT-probe readiness guard is only validated for motors already in MIT.
+    if (device.run_mode_received && device.run_mode != 0U) {
+      continue;
+    }
+    std::string reason;
+    if (!enable_check_started_ || !device.run_mode_received ||
+        !device.status_received || device.last_status < enable_check_start_ ||
+        now < device.last_status ||
+        now - device.last_status > kStartupFeedbackFreshness) {
+      reason = "missing fresh MIT status";
+    } else if (device.faulted) {
+      reason = "motor fault";
+    } else if (device.startup_moved) {
+      reason = "moved more than 0.025 rad while disabled; support and retry "
+               "activation";
+    } else if (device.mode_state != 0U && device.mode_state != 2U) {
+      reason = "unexpected motor state " + std::to_string(device.mode_state);
+    } else if (device.temperature_c <= 0.0) {
+      reason = "ambiguous 0-C startup feedback (not a firmware ready flag)";
+    } else if (device.mode_state == 0U &&
+               (device.stable_samples < 3 ||
+                device.last_status - device.stable_since <
+                    kStartupStableDuration)) {
+      reason = "waiting for three stable disabled replies over at least 30 ms";
+    }
+    if (!reason.empty()) {
+      pending.push_back(device.name + ": " + reason);
+    }
+  }
+  return pending;
 }
 
 std::vector<shared_can_interface::v1::TimedFrameBatch>
@@ -285,8 +393,13 @@ RobStrideProtocol::pre_enable_sequence() const {
                                "position: " +
                                device.name);
     }
+    const double probe_position = enable_check_started_ &&
+                                          device.status_received &&
+                                          device.mode_state == 0U
+                                      ? device.position
+                                      : device.command_position;
     const double motor_target =
-        device.direction * (device.command_position - device.offset);
+        device.direction * (probe_position - device.offset);
     probe.frames.push_back(codec::make_mit_command(
         device.motor_id, device.limits, static_cast<float>(motor_target), 0.0F,
         static_cast<float>(device.command_kp),
@@ -300,6 +413,13 @@ RobStrideProtocol::pre_enable_sequence() const {
 
 std::vector<shared_can_interface::v1::TimedFrameBatch>
 RobStrideProtocol::enable_sequence() const {
+  if (enable_check_started_) {
+    const auto pending =
+        pending_enable_states(std::chrono::steady_clock::now());
+    if (!pending.empty()) {
+      throw std::runtime_error("cannot enable RobStride: " + pending.front());
+    }
+  }
   shared_can_interface::v1::TimedFrameBatch set_mode;
   shared_can_interface::v1::TimedFrameBatch enable_and_hold;
 
@@ -451,6 +571,14 @@ bool RobStrideProtocol::get_initial_command(const std::string &device_name,
   const auto *device = find_by_name(device_name);
   if (device == nullptr) {
     return false;
+  }
+  if (interface_name == "position" && enable_check_started_ &&
+      device->status_received && device->run_mode == 0U) {
+    // Reseeding after the wait must not erase an already-issued warm preload.
+    // A disabled motor instead starts at the latest measured, supported pose.
+    value =
+        device->mode_state == 2U ? device->command_position : device->position;
+    return std::isfinite(value);
   }
   if (interface_name != "position" || !device->position_valid ||
       !device->filtered_current_received || !device->run_mode_received ||

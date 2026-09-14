@@ -14,3 +14,6 @@ source /workspaces/zephyr-dev/zephyr_ws/install/setup.bash
 
 The checked-in asset was imported with Isaac Sim 6.0.1, a fixed base, force drives,
 position targets, stiffness 200, and damping 20.
+
+The Action Graph is intentionally created by `rebot_arm_rs_bringup` at runtime rather than saved
+into this generated USD, so regenerating the asset cannot remove the ROS 2 interface.

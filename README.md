@@ -53,6 +53,23 @@ adding another motor, gripper, hand, or sensor protocol.
 - Activation always enables the arm. The driver first sends the preload-preserving MIT hold as a
   probe: motors already in Motor mode are not enabled again, while stopped motors receive adjacent
   enable and hold frames. Motors already in MIT `run_mode` are not reconfigured.
+- For motors already in MIT mode, the updated shared CAN runtime repeats no-enable probes
+  approximately every 20 ms, with a 3 s timeout. A disabled motor needs at least three fault-free
+  status replies spanning 30 ms, with position span <= 0.003 rad, temperature span <= 1 C,
+  absolute velocity <= 0.5 rad/s, and latest feedback no older than 100 ms. Moving more than
+  0.025 rad from the initial supported pose prevents activation until it is retried. Before
+  enabling, the stopped motor's hold and exported command baseline are reseeded to its latest
+  measured pose. A warm MIT motor keeps its preload hold and needs fresh fault-free Motor-mode
+  feedback, not a redundant enable or cold settling delay.
+- This is a conservative guard for the observed RS firmware startup race, **not a documented
+  firmware-ready bit or a torque self-test**. Initial status at exactly 0 C was observed before
+  a working temperature/status update. Such feedback is ambiguous and does not pass the gate;
+  no automatic disable/re-enable is attempted. Real near/below-zero-temperature operation needs
+  separate validation, not simply bypassing this check. Non-MIT mode conversion retains the
+  existing sequence and is not covered by this MIT-only readiness validation.
+- Build both `shared_can_ros2` and `rebot_robstride_protocol` for this guard. A readiness timeout
+  reports the affected joint/reason and fails before sending enable/disable frames. Keep the
+  complete arm supported during cold activation; these checks cannot establish payload support.
 - The trajectory controller is spawned as the head of a three-controller chain by default:
   `JointTrajectoryController -> MIT position adapter -> MIT output controller`. Pass
   `activate_trajectory_controller:=false` to keep the MIT output controller active in safe HOLD
@@ -120,7 +137,7 @@ prevents package discovery from scanning unrelated Python sources.
 # No physical hardware: validates the description and controller stack.
 ros2 launch rebot_arm_rs_bringup mock.launch.py
 
-# Open the checked-in robot asset with Isaac Sim and enable its ROS 2 bridge.
+# Open the checked-in robot asset and start its Isaac ros2_control backend.
 ros2 launch rebot_arm_rs_bringup isaac_sim.launch.py
 
 # The same asset can be started without a GUI for launch and bridge validation.
@@ -168,10 +185,23 @@ ros2 control switch_controllers \
 ros2 topic echo /rebot_arm_rs_impedance_controller/state
 ```
 
-The current Isaac USD contains the imported articulation and joint drives. The ROS 2 bridge is
-loaded by the launch file, but a joint-state/command Action Graph is not yet authored in the USD;
-the launch is therefore an asset and physics-model entry point, not yet a ros2_control backend.
-See `rebot_arm_rs_description/usd/README.md` for the explicit URDF-to-USD regeneration workflow.
+The Isaac launch starts a simulation-specific position trajectory controller and
+`topic_based_ros2_control/TopicBasedSystem`; the physical MIT controller chain is unchanged. At
+runtime it creates an Action Graph that publishes `/rebot_arm_rs/isaac_joint_states`, subscribes
+to `/rebot_arm_rs/isaac_joint_commands`, drives the articulation, and publishes `/clock`. Pass
+`start_ros2_control:=false` to open only the Isaac stage and Graph. See
+`rebot_arm_rs_description/usd/README.md` for the explicit URDF-to-USD regeneration workflow.
+
+Send a simulation trajectory with:
+
+```bash
+ros2 action send_goal \
+  /rebot_arm_rs_isaac_trajectory_controller/follow_joint_trajectory \
+  control_msgs/action/FollowJointTrajectory \
+  "{trajectory: {joint_names: [joint1, joint2, joint3, joint4, joint5, joint6], \
+  points: [{positions: [0.1, 0.2, 0.2, 0.0, 0.0, 0.0], \
+  time_from_start: {sec: 3}}]}}"
+```
 
 ## Source references
 

@@ -7,12 +7,14 @@
 #include <vector>
 
 #include "rebot_robstride_protocol/robstride_codec.hpp"
+#include "shared_can_interface/enable_readiness_interface.hpp"
 #include "shared_can_interface/protocol_interface.hpp"
 
 namespace rebot_robstride_protocol {
 
 class RobStrideProtocol final
-    : public shared_can_interface::v1::ProtocolInterface {
+    : public shared_can_interface::v1::ProtocolInterface,
+      public shared_can_interface::v1::EnableReadinessInterface {
 public:
   void
   configure(const shared_can_interface::v1::ParameterMap &bus_parameters,
@@ -29,6 +31,9 @@ public:
   std::optional<shared_can_interface::v1::CanFrame> periodic_request() override;
   std::vector<shared_can_interface::v1::TimedFrameBatch>
   pre_enable_sequence() const override;
+  void begin_enable_check(std::chrono::steady_clock::time_point now) override;
+  std::vector<std::string> pending_enable_states(
+      std::chrono::steady_clock::time_point now) const override;
   std::vector<shared_can_interface::v1::TimedFrameBatch>
   enable_sequence() const override;
   std::vector<shared_can_interface::v1::CanFrame>
@@ -75,6 +80,15 @@ private:
     bool filtered_current_received{false};
     bool run_mode_received{false};
     bool faulted{false};
+    std::chrono::steady_clock::time_point last_status{};
+    std::chrono::steady_clock::time_point stable_since{};
+    std::size_t stable_samples{0};
+    double stable_position_min{0.0};
+    double stable_position_max{0.0};
+    double stable_temperature_min{0.0};
+    double stable_temperature_max{0.0};
+    double check_initial_position{0.0};
+    bool startup_moved{false};
   };
 
   Device *find_by_motor_id(std::uint8_t motor_id);
@@ -82,6 +96,8 @@ private:
   const Device *find_by_name(const std::string &name) const;
   std::uint8_t host_id_{0xFD};
   std::vector<Device> devices_;
+  bool enable_check_started_{false};
+  std::chrono::steady_clock::time_point enable_check_start_{};
 };
 
 } // namespace rebot_robstride_protocol

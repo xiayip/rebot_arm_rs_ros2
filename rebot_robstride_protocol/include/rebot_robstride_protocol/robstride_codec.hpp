@@ -11,6 +11,12 @@ namespace rebot_robstride_protocol::codec {
 
 using Frame = shared_can_interface::v1::CanFrame;
 
+namespace parameter {
+constexpr std::uint16_t kRunMode = 0x7005;
+constexpr std::uint16_t kMechanicalPosition = 0x7019;
+constexpr std::uint16_t kFilteredCurrent = 0x701A;
+} // namespace parameter
+
 enum class CommunicationType : std::uint8_t {
   kGetDeviceId = 0,
   kOperationControl = 1,

@@ -1,7 +1,14 @@
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, OpaqueFunction
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+)
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
@@ -32,7 +39,11 @@ def _launch_isaac_sim(context, stage_loader_path):
     ros_library_path = os.path.join(
         isaac_sim_root, "exts", "isaacsim.ros2.core", ros_distro, "lib"
     )
-    library_paths = [path for path in (os.environ.get("LD_LIBRARY_PATH"), ros_library_path) if path]
+    library_paths = [
+        path
+        for path in (os.environ.get("LD_LIBRARY_PATH"), ros_library_path)
+        if path
+    ]
 
     command = [
         isaac_sim_script,
@@ -50,6 +61,7 @@ def _launch_isaac_sim(context, stage_loader_path):
             additional_env={
                 "LD_LIBRARY_PATH": os.pathsep.join(library_paths),
                 "MPLCONFIGDIR": "/tmp/rebot_arm_rs_isaac_matplotlib",
+                "OMNI_KIT_ALLOW_ROOT": "1",
                 "RMW_IMPLEMENTATION": rmw_implementation,
                 "ROS_DISTRO": ros_distro,
                 "ROS_DOMAIN_ID": ros_domain_id,
@@ -65,6 +77,7 @@ def _launch_isaac_sim(context, stage_loader_path):
 
 
 def generate_launch_description():
+    bringup_share = FindPackageShare("rebot_arm_rs_bringup")
     default_usd_path = PathJoinSubstitution(
         [
             FindPackageShare("rebot_arm_rs_description"),
@@ -75,10 +88,18 @@ def generate_launch_description():
     )
     stage_loader_path = PathJoinSubstitution(
         [
-            FindPackageShare("rebot_arm_rs_bringup"),
+            bringup_share,
             "scripts",
             "open_isaac_stage.py",
         ]
+    )
+    ros2_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [bringup_share, "launch", "isaac_ros2_control.launch.py"]
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration("start_ros2_control")),
     )
 
     return LaunchDescription(
@@ -113,6 +134,12 @@ def generate_launch_description():
                 default_value=EnvironmentVariable("ROS_DOMAIN_ID", default_value="0"),
                 description="ROS domain used by the Isaac ROS 2 Bridge.",
             ),
+            DeclareLaunchArgument(
+                "start_ros2_control",
+                default_value="true",
+                description="Start controller_manager with the Isaac topic hardware.",
+            ),
+            ros2_control_launch,
             OpaqueFunction(
                 function=_launch_isaac_sim,
                 kwargs={"stage_loader_path": stage_loader_path},

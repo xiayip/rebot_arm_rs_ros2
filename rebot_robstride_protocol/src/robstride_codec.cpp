@@ -98,9 +98,12 @@ Frame make_write_parameter_f32(std::uint8_t motor_id, std::uint8_t host_id,
       make_frame(CommunicationType::kWriteParameter, host_id, motor_id);
   frame.data[0] = static_cast<std::uint8_t>(parameter_id & 0xFFU);
   frame.data[1] = static_cast<std::uint8_t>(parameter_id >> 8U);
-  std::array<std::uint8_t, 4> raw{};
-  std::memcpy(raw.data(), &value, sizeof(value));
-  std::copy(raw.begin(), raw.end(), frame.data.begin() + 4);
+  std::uint32_t raw = 0;
+  static_assert(sizeof(raw) == sizeof(value));
+  std::memcpy(&raw, &value, sizeof(value));
+  for (unsigned i = 0; i < 4; ++i) {
+    frame.data[4 + i] = static_cast<std::uint8_t>(raw >> (8U * i));
+  }
   return frame;
 }
 
@@ -134,7 +137,8 @@ std::optional<Status> decode_status(const Frame &frame,
     return std::nullopt;
   }
   const auto id = parse_extended_id(frame.arbitration_id);
-  if (id.communication_type != CommunicationType::kOperationStatus) {
+  if (id.communication_type != CommunicationType::kOperationStatus &&
+      id.communication_type != CommunicationType::kActiveReport) {
     return std::nullopt;
   }
 
@@ -168,7 +172,10 @@ std::optional<ParameterResponse> decode_parameter_response(const Frame &frame) {
     return std::nullopt;
   }
   const auto id = parse_extended_id(frame.arbitration_id);
-  if (id.communication_type != CommunicationType::kReadParameter) {
+  // Bits 23:16 are the read-error field. An error reply must not seed a hold
+  // position/run mode/current from otherwise plausible payload bytes.
+  if (id.communication_type != CommunicationType::kReadParameter ||
+      (id.extra_data & 0xFF00U) != 0U) {
     return std::nullopt;
   }
   return ParameterResponse{
@@ -180,7 +187,11 @@ std::optional<ParameterResponse> decode_parameter_response(const Frame &frame) {
 
 float parameter_as_f32(const ParameterResponse &response) {
   float value = 0.0F;
-  std::memcpy(&value, response.raw_value.data(), sizeof(value));
+  std::uint32_t raw = 0;
+  for (unsigned i = 0; i < 4; ++i) {
+    raw |= static_cast<std::uint32_t>(response.raw_value[i]) << (8U * i);
+  }
+  std::memcpy(&value, &raw, sizeof(value));
   return value;
 }
 

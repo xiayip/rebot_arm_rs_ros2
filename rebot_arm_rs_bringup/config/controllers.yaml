@@ -31,8 +31,8 @@ rebot_arm_rs_position_adapter:
   ros__parameters:
     joints: [joint1, joint2, joint3, joint4, joint5, joint6]
     downstream_controller: rebot_arm_rs_mit_controller
-    position_kp: [50.0, 120.0, 120.0, 50.0, 50.0, 50.0]
-    position_kd: [3.0, 4.0, 4.0, 5.0, 4.0, 4.0]
+    position_kp: [300.0, 300.0, 300.0, 80.0, 80.0, 80.0]
+    position_kd: [6.0, 12.0, 12.0, 5.0, 4.0, 4.0]
     state_publish_rate: 50.0
     gravity_compensation:
       # Joint2/3/4 affine gravity coefficients were commissioned on the

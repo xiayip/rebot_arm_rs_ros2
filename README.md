@@ -1,11 +1,47 @@
 # rebot_arm_rs_ros2
 
-Native ROS 2 control stack for the six-axis Seeed reBot Arm B601-RS.
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-The driver uses the reusable `shared_can_hardware` stack for ros2_control and SocketCAN, with a
-RobStride protocol plugin provided by this repository. It does not depend on MotorBridge at
-runtime; MotorBridge is retained as an independent protocol oracle during driver development and
-hardware validation.
+Native ROS 2 Jazzy control stack for the six-axis Seeed reBot Arm B601-RS.
+
+This project complements Seeed Studio's official
+[reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm) open-source robot-arm project. The
+official repository is the source for hardware designs, BOMs, assembly information, and product
+documentation. This repository is an independent ROS 2 integration focused on the B601-RS:
+`ros2_control`, RobStride private-CAN communication, controller configuration, robot descriptions,
+and simulation launch files.
+
+The driver uses the reusable
+[`shared_can_hardware`](https://github.com/xiayip/shared_can_hardware) stack for ros2_control and
+SocketCAN, with a RobStride protocol plugin provided by this repository. It does not depend on
+MotorBridge at runtime; MotorBridge is retained as an independent protocol oracle during driver
+development and hardware validation.
+
+## Highlights
+
+- Native `ros2_control` hardware and standard `JointTrajectoryController` integration.
+- MIT position, damping, and impedance controller chains with Pinocchio gravity compensation.
+- Conservative startup checks and preload-preserving activation for loaded arms.
+- Mock-hardware, RViz, and Isaac Sim launch paths.
+- Replaceable flange composition and an optional official Seeed parallel-gripper model.
+- Standard `ParallelGripperCommand` action for the optional official gripper.
+
+## Supported target
+
+| Component | Current target |
+| --- | --- |
+| Robot | reBot Arm B601-RS, six axes |
+| Motors | J1-J3 RobStride RS-06; J4-J6 RobStride RS-00 |
+| ROS | ROS 2 Jazzy on Ubuntu 24.04 |
+| Bus | Linux SocketCAN; launch default is `can1` |
+| Simulation | ros2_control mock hardware and Isaac Sim |
+
+Other ROS distributions, motor layouts, and firmware revisions have not been validated by this
+repository unless stated otherwise. Review the configured motor IDs, joint limits, zero offsets,
+CAN interface, and controller gains before operating a different arm.
+
+The package manifests currently use the pre-release version `0.1.0`; configuration and APIs may
+still change before the first tagged stable release.
 
 ## Packages
 
@@ -17,8 +53,8 @@ hardware validation.
 | `rebot_arm_rs_bringup` | Controller configuration and launch files |
 
 The six-axis URDF inertial data and aggregate meshes are synchronized from Seeed Studio's official
-RS CAD export. See `rebot_arm_rs_description/urdf/UPSTREAM.md` for the pinned upstream commit,
-checksums, and the optional-gripper composition policy.
+RS CAD export. See [`UPSTREAM.md`](rebot_arm_rs_description/urdf/UPSTREAM.md) for the pinned
+upstream commits, checksums, and the optional-gripper composition policy.
 
 ## Description composition
 
@@ -60,7 +96,7 @@ ros2 launch rebot_arm_rs_bringup real_world.launch.py \
 
 The default remains the arm with stock flange and no gripper, so existing launch behavior and
 downstream custom-flange compositions are unchanged. See
-`rebot_arm_rs_description/urdf/UPSTREAM.md` for pinned source and license details.
+[`UPSTREAM.md`](rebot_arm_rs_description/urdf/UPSTREAM.md) for pinned source and license details.
 
 The official gripper uses ros2_controllers'
 `parallel_gripper_action_controller/GripperActionController` and exposes the standard ROS 2
@@ -99,9 +135,10 @@ rebot_arm_rs_ros2
 └── shared_can_hardware      (shared CAN ABI, bus manager and SocketCAN transport)
 ```
 
-`zephyr_controllers` and `shared_can_hardware` do not depend on this repository or on each other.
-They communicate through standard ros2_control command/state interfaces, so either lower layer can
-be reused by another robot or hardware implementation.
+[`zephyr_controllers`](https://github.com/xiayip/zephyr_controllers) and
+[`shared_can_hardware`](https://github.com/xiayip/shared_can_hardware) do not depend on this
+repository or on each other. They communicate through standard ros2_control command/state
+interfaces, so either lower layer can be reused by another robot or hardware implementation.
 
 This repository owns only the reBot-specific integration:
 
@@ -119,13 +156,57 @@ For a source workspace, clone this repository first and import its two project d
 ```bash
 mkdir -p ~/rebot_ws/src
 cd ~/rebot_ws/src
-git clone https://jihulab.com/robot_group/zephyr_common/rebot_arm_rs_ros2.git
+git clone https://github.com/xiayip/rebot_arm_rs_ros2.git
 cd ~/rebot_ws
 vcs import src < src/rebot_arm_rs_ros2/rebot_arm_rs_jazzy.repos
 ```
 
-`rebot_arm_rs_jazzy.repos` follows the active `main` branches. Release snapshots should replace
-those branch names with compatible immutable tags or commit hashes.
+[`rebot_arm_rs_jazzy.repos`](rebot_arm_rs_jazzy.repos) records the dependency repository URLs and
+currently follows their active `main` branches. Release snapshots should replace those branch
+names with compatible immutable tags or commit hashes.
+
+## Safety before real-hardware use
+
+This software can command enough torque to move the arm suddenly. Before the first real-hardware
+launch:
+
+1. Support the complete arm and payload, keep people and cables outside the swept volume, and keep
+   a power disconnect within reach.
+2. Verify joint zero offsets, motor IDs, joint directions, limits, payload description, and the CAN
+   interface against the physical robot.
+3. Stop MotorBridge, CAN test scripts, and any other process that can transmit on the same bus.
+   Only one control owner may use the arm CAN bus.
+4. Start with conservative trajectories and confirm every joint is enabled and holding before
+   removing support.
+
+A normal Ctrl-C intentionally does **not** send motor-disable frames; the motor-side command remains
+active so the arm does not immediately lose holding torque. Do not mistake process exit for a safe
+power-off state. Power loss, a motor fault, or a separately configured CAN timeout can still remove
+torque. Use independent mechanical support whenever loss of holding torque could cause damage.
+
+## Controller architecture
+
+The real-hardware stack uses chainable controllers rather than sending trajectories directly to
+the motor protocol:
+
+```text
+JointTrajectoryController
+  -> MIT position adapter (gains + gravity feed-forward)
+  -> MIT output controller
+  -> ros2_control hardware -> SocketCAN -> RobStride motors
+```
+
+| Mode | Active high-level controllers | Intended use |
+| --- | --- | --- |
+| Position trajectory | `rebot_arm_rs_trajectory_controller` + `rebot_arm_rs_position_adapter` | Default, stiff trajectory tracking through MIT commands |
+| Damping | `rebot_arm_rs_damping_controller` | Backdrivable, gravity-compensated manual guidance |
+| Impedance trajectory | `rebot_arm_rs_impedance_trajectory_controller` + `rebot_arm_rs_impedance_controller` | Compliant trajectory tracking and obstruction handling |
+| MIT output | `rebot_arm_rs_mit_controller` | Final chained output stage; normally kept active under all three modes |
+
+The position trajectory mode is an MIT position-control chain, not the motors' native CSP loop.
+The calibrated gains and feed-forward values in `controllers.yaml` are robot-specific starting
+points; revalidate them after changing the flange, tool, payload, mounting orientation, or motor
+firmware.
 
 ## Hardware startup behavior
 
@@ -203,72 +284,36 @@ those branch names with compatible immutable tags or commit hashes.
 
 MotorBridge Gateway and this hardware plugin must not control the same CAN bus at the same time.
 
-## Build
+## Build and first mock launch
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-cd ~/ros2_ws
+cd ~/rebot_ws
 vcs import src < src/rebot_arm_rs_ros2/rebot_arm_rs_jazzy.repos
 rosdep install --from-paths src --ignore-src --rosdistro jazzy -r -y
 colcon build --symlink-install --packages-up-to rebot_arm_rs
 source install/setup.bash
+
+# No physical hardware: validate the description and controller stack in RViz.
+ros2 launch rebot_arm_rs_bringup mock.launch.py
 ```
 
 Run `colcon` from the ROS 2 workspace root rather than from one of its parent directories; this
 prevents package discovery from scanning unrelated Python sources.
 
-## Start
+## Launch and operate
+
+### Description and simulation
 
 ```bash
-# No physical hardware: validates the description and controller stack.
-ros2 launch rebot_arm_rs_bringup mock.launch.py
+# Inspect the stock robot description without ros2_control.
+ros2 launch rebot_arm_rs_description view_robot.launch.py
 
 # Open the checked-in robot asset and start its Isaac ros2_control backend.
 ros2 launch rebot_arm_rs_bringup isaac_sim.launch.py
 
 # The same asset can be started without a GUI for launch and bridge validation.
 ros2 launch rebot_arm_rs_bringup isaac_sim.launch.py headless:=true
-
-# Physical CAN bus; stopped motors enable, and Ctrl-C retains the last motor-side hold command.
-ros2 launch rebot_arm_rs_bringup real_world.launch.py can_interface:=can1
-
-# Optional startup with the trajectory controller loaded but inactive.
-# The hardware driver still enables and holds the arm.
-ros2 launch rebot_arm_rs_bringup real_world.launch.py \
-  can_interface:=can1 activate_trajectory_controller:=false
-
-# Tune the position-mode gains online. Each array must contain one nonnegative value per joint.
-ros2 param set /rebot_arm_rs_position_adapter \
-  position_kp "[50.0, 120.0, 120.0, 50.0, 50.0, 50.0]"
-ros2 param set /rebot_arm_rs_position_adapter \
-  position_kd "[3.0, 4.0, 4.0, 5.0, 4.0, 4.0]"
-
-# Inspect the realtime MIT command decomposition.
-ros2 topic echo /rebot_arm_rs_position_adapter/mit_state
-
-# Switch from the stiff trajectory chain to the compliant trajectory chain.
-ros2 control switch_controllers \
-  --deactivate rebot_arm_rs_trajectory_controller rebot_arm_rs_position_adapter \
-  --activate rebot_arm_rs_impedance_controller \
-             rebot_arm_rs_impedance_trajectory_controller \
-  --strict -c /controller_manager
-
-# Send a trajectory through the impedance JTC.
-ros2 action send_goal \
-  /rebot_arm_rs_impedance_trajectory_controller/follow_joint_trajectory \
-  control_msgs/action/FollowJointTrajectory \
-  "{trajectory: {joint_names: [joint2], points: [{positions: [0.3], \
-  time_from_start: {sec: 3, nanosec: 0}}]}}"
-
-# Return to the stiff trajectory chain.
-ros2 control switch_controllers \
-  --deactivate rebot_arm_rs_impedance_trajectory_controller \
-               rebot_arm_rs_impedance_controller \
-  --activate rebot_arm_rs_position_adapter rebot_arm_rs_trajectory_controller \
-  --strict -c /controller_manager
-
-# Inspect the desired/limited equilibrium, MIT gains, and torque decomposition.
-ros2 topic echo /rebot_arm_rs_impedance_controller/state
 ```
 
 The Isaac launch starts a simulation-specific position trajectory controller and
@@ -276,7 +321,8 @@ The Isaac launch starts a simulation-specific position trajectory controller and
 runtime it creates an Action Graph that publishes `/rebot_arm_rs/isaac_joint_states`, subscribes
 to `/rebot_arm_rs/isaac_joint_commands`, drives the articulation, and publishes `/clock`. Pass
 `start_ros2_control:=false` to open only the Isaac stage and Graph. See
-`rebot_arm_rs_description/usd/README.md` for the explicit URDF-to-USD regeneration workflow.
+[`rebot_arm_rs_description/usd/README.md`](rebot_arm_rs_description/usd/README.md) for the explicit
+URDF-to-USD regeneration workflow.
 
 Send a simulation trajectory with:
 
@@ -289,8 +335,142 @@ ros2 action send_goal \
   time_from_start: {sec: 3}}]}}"
 ```
 
+### Real hardware
+
+Complete the safety checks above, configure and bring up the SocketCAN interface, then launch:
+
+```bash
+# Physical CAN bus; stopped motors enable, and Ctrl-C retains the last motor-side hold command.
+ros2 launch rebot_arm_rs_bringup real_world.launch.py can_interface:=can1
+
+# Optional startup with the trajectory controller loaded but inactive.
+# The hardware driver still enables and holds the arm.
+ros2 launch rebot_arm_rs_bringup real_world.launch.py \
+  can_interface:=can1 activate_trajectory_controller:=false
+```
+
+Check state before commanding motion:
+
+```bash
+ros2 control list_controllers -c /controller_manager
+ros2 topic echo --once /joint_states
+```
+
+Send a small position trajectory only after confirming that the physical direction and workspace
+are safe:
+
+```bash
+ros2 action send_goal \
+  /rebot_arm_rs_trajectory_controller/follow_joint_trajectory \
+  control_msgs/action/FollowJointTrajectory \
+  "{trajectory: {joint_names: [joint1], points: [{positions: [0.1], \
+  time_from_start: {sec: 3, nanosec: 0}}]}}"
+```
+
+### Switch control modes
+
+`--strict` rejects a request that tries to deactivate a controller that is not active. Run
+`ros2 control list_controllers` first and include only the currently active source controllers.
+
+From the default position trajectory chain to damping mode:
+
+```bash
+ros2 control switch_controllers \
+  --deactivate rebot_arm_rs_trajectory_controller rebot_arm_rs_position_adapter \
+  --activate rebot_arm_rs_damping_controller \
+  --strict -c /controller_manager
+```
+
+From damping mode back to the default position trajectory chain:
+
+```bash
+ros2 control switch_controllers \
+  --deactivate rebot_arm_rs_damping_controller \
+  --activate rebot_arm_rs_position_adapter rebot_arm_rs_trajectory_controller \
+  --strict -c /controller_manager
+```
+
+From the default position trajectory chain to the compliant impedance trajectory chain:
+
+```bash
+ros2 control switch_controllers \
+  --deactivate rebot_arm_rs_trajectory_controller rebot_arm_rs_position_adapter \
+  --activate rebot_arm_rs_impedance_controller \
+             rebot_arm_rs_impedance_trajectory_controller \
+  --strict -c /controller_manager
+```
+
+Send a trajectory through the impedance JTC:
+
+```bash
+ros2 action send_goal \
+  /rebot_arm_rs_impedance_trajectory_controller/follow_joint_trajectory \
+  control_msgs/action/FollowJointTrajectory \
+  "{trajectory: {joint_names: [joint2], points: [{positions: [0.3], \
+  time_from_start: {sec: 3, nanosec: 0}}]}}"
+```
+
+Return to the default position trajectory chain:
+
+```bash
+ros2 control switch_controllers \
+  --deactivate rebot_arm_rs_impedance_trajectory_controller \
+               rebot_arm_rs_impedance_controller \
+  --activate rebot_arm_rs_position_adapter rebot_arm_rs_trajectory_controller \
+  --strict -c /controller_manager
+```
+
+### Diagnostics and runtime tuning
+
+```bash
+# Inspect the realtime MIT command decomposition.
+ros2 topic echo /rebot_arm_rs_position_adapter/mit_state
+
+# Inspect the desired/limited impedance equilibrium, MIT gains, and torque decomposition.
+ros2 topic echo /rebot_arm_rs_impedance_controller/state
+
+# Tune the position-mode gains online. Each array must contain one nonnegative value per joint.
+# Do this only with the arm supported and after recording the current values.
+ros2 param set /rebot_arm_rs_position_adapter \
+  position_kp "[300.0, 300.0, 300.0, 80.0, 80.0, 80.0]"
+ros2 param set /rebot_arm_rs_position_adapter \
+  position_kd "[6.0, 12.0, 12.0, 5.0, 4.0, 4.0]"
+```
+
 ## Source references
 
-- Seeed B601-RS URDF kinematics and arm meshes: `Seeed-Projects/reBotArmController_ROS2`
-- Seeed official parallel-gripper URDF and meshes: `Seeed-Projects/reBot-DevArm`
+- reBot Arm main hardware, BOM, and community repository:
+  [Seeed-Projects/reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm)
+- Seeed B601-RS URDF kinematics and arm meshes:
+  [Seeed-Projects/reBotArmController_ROS2](https://github.com/Seeed-Projects/reBotArmController_ROS2)
+- Seeed official parallel-gripper URDF and meshes:
+  [Seeed-Projects/reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm)
 - RobStride private CAN protocol behavior: RobStride manuals and MotorBridge 0.5.1
+
+Exact imported revisions and asset checksums are recorded in
+[`rebot_arm_rs_description/urdf/UPSTREAM.md`](rebot_arm_rs_description/urdf/UPSTREAM.md).
+
+## License
+
+The ROS integration packages declare `Apache-2.0` in their package manifests. Imported Seeed
+hardware-description assets retain their upstream licensing and provenance. In particular, the
+official parallel-gripper hardware assets are covered by `CERN-OHL-W-2.0`; see
+[`rebot_arm_rs_description/LICENSES`](rebot_arm_rs_description/LICENSES) and
+[`UPSTREAM.md`](rebot_arm_rs_description/urdf/UPSTREAM.md) before redistributing modified assets.
+
+## Contributing
+
+Issues and pull requests are welcome. Keep robot-specific protocol and description changes in this
+repository, reusable CAN transport changes in
+[`shared_can_hardware`](https://github.com/xiayip/shared_can_hardware), and generic controller
+changes in [`zephyr_controllers`](https://github.com/xiayip/zephyr_controllers). For code changes,
+build the affected packages and run:
+
+```bash
+colcon test --packages-up-to rebot_arm_rs
+colcon test-result --verbose
+```
+
+Hardware changes should include the tested arm configuration, firmware version, CAN capture or
+relevant controller telemetry, exact commands, and whether the result was obtained on mock,
+simulation, or physical hardware. Never report an unexecuted hardware test as successful.

@@ -2,7 +2,13 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, RegisterEventHandler
 from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnProcessExit
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (
+    Command,
+    FindExecutable,
+    LaunchConfiguration,
+    PathJoinSubstitution,
+    PythonExpression,
+)
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
@@ -58,6 +64,21 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=["joint_state_broadcaster", "-c", "/controller_manager"],
+        output="screen",
+    )
+    official_gripper_spawner = Node(
+        condition=IfCondition(
+            PythonExpression(
+                [
+                    "'",
+                    description_file,
+                    "' == 'rebot_arm_rs_with_official_parallel_gripper.urdf.xacro'",
+                ]
+            )
+        ),
+        package="controller_manager",
+        executable="spawner",
+        arguments=["rebot_arm_rs_gripper_controller", "-c", "/controller_manager"],
         output="screen",
     )
     mit_controller_spawner = Node(
@@ -134,7 +155,7 @@ def generate_launch_description():
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=joint_state_spawner,
-                    on_exit=[mit_controller_spawner],
+                    on_exit=[mit_controller_spawner, official_gripper_spawner],
                 )
             ),
             RegisterEventHandler(

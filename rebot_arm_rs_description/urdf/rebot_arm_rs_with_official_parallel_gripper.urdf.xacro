@@ -14,13 +14,14 @@
   <xacro:rebot_arm_rs_stock_flange parent="link6"/>
   <xacro:rebot_arm_rs_official_parallel_gripper parent="rebot_arm_rs_stock_flange_link"/>
   <xacro:if value="$(arg use_isaac_sim)">
-    <xacro:rebot_arm_rs_isaac_ros2_control name="RebotArmRsSystem"/>
+    <xacro:rebot_arm_rs_isaac_ros2_control name="RebotArmRsSystem" with_official_gripper="true"/>
   </xacro:if>
   <xacro:unless value="$(arg use_isaac_sim)">
     <xacro:rebot_arm_rs_ros2_control
       name="RebotArmRsSystem"
       use_mock_hardware="$(arg use_mock_hardware)"
       mock_sensor_commands="$(arg mock_sensor_commands)"
-      can_interface="$(arg can_interface)"/>
+      can_interface="$(arg can_interface)"
+      with_official_gripper="true"/>
   </xacro:unless>
 </robot>

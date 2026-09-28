@@ -67,6 +67,26 @@
       <axis xyz="0 0 0"/>
     </joint>
 
+    <!--
+      One normalized actuator coordinate is exposed to ros2_control:
+      0.0 = fully open, 1.0 = fully closed. The two physical finger joints
+      mimic this coordinate using the limits from Seeed's official model.
+    -->
+    <link name="${prefix}gripper_control_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.000001"/>
+        <inertia ixx="1e-12" ixy="0" ixz="0" iyy="1e-12" iyz="0" izz="1e-12"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}gripper_command_joint" type="revolute">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${prefix}gripper_end"/>
+      <child link="${prefix}gripper_control_link"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="0" upper="1" effort="1" velocity="1"/>
+    </joint>
+
     <link name="${prefix}gripper_left">
       <inertial>
         <origin xyz="-0.00218008703135955 0.0187090355934181 0.00932188568692145"
@@ -97,6 +117,7 @@
       <child link="${prefix}gripper_left"/>
       <axis xyz="0 0 1"/>
       <limit lower="0" upper="0.05" effort="500" velocity="10"/>
+      <mimic joint="${prefix}gripper_command_joint" multiplier="-0.05" offset="0.05"/>
     </joint>
 
     <link name="${prefix}gripper_right">
@@ -129,6 +150,7 @@
       <child link="${prefix}gripper_right"/>
       <axis xyz="0 0 1"/>
       <limit lower="0" upper="0.0715" effort="500" velocity="10"/>
+      <mimic joint="${prefix}gripper_command_joint" multiplier="-0.0715" offset="0.0715"/>
     </joint>
   </xacro:macro>
 </robot>

@@ -55,7 +55,38 @@
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="rebot_arm_rs_ros2_control" params="name use_mock_hardware mock_sensor_commands can_interface">
+  <xacro:macro name="rebot_arm_rs_official_gripper_interfaces" params="name">
+    <joint name="${name}">
+      <param name="protocol_plugin">rebot_robstride_protocol/RebotGripperProtocol</param>
+      <param name="protocol_instance">official_gripper_robstride</param>
+      <param name="motor_id">0x07</param>
+      <param name="model">rs-00</param>
+      <param name="direction">1.0</param>
+      <param name="offset">0.0</param>
+      <param name="mit_kp">50.0</param>
+      <param name="mit_kd">4.0</param>
+      <param name="open_position">5.0</param>
+      <param name="closed_position">0.0</param>
+      <param name="default_velocity">0.25</param>
+      <param name="min_position">0.0</param>
+      <param name="max_position">1.0</param>
+      <command_interface name="position">
+        <param name="min">0.0</param>
+        <param name="max">1.0</param>
+      </command_interface>
+      <command_interface name="velocity">
+        <param name="min">0.0</param>
+        <param name="max">1.0</param>
+        <param name="initial_value">0.25</param>
+      </command_interface>
+      <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
+      <state_interface name="temperature"><param name="initial_value">0.0</param></state_interface>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_ros2_control" params="name use_mock_hardware mock_sensor_commands can_interface with_official_gripper:=false">
     <ros2_control name="${name}" type="system">
       <hardware>
         <xacro:if value="${use_mock_hardware}">
@@ -81,10 +112,13 @@
       <xacro:rebot_arm_rs_joint_interfaces name="joint4" motor_id="0x04" model="rs-00" kp="50.0" kd="5.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
       <xacro:rebot_arm_rs_joint_interfaces name="joint5" motor_id="0x05" model="rs-00" kp="50.0" kd="4.0" lower="-1.57" upper="1.57" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
       <xacro:rebot_arm_rs_joint_interfaces name="joint6" motor_id="0x06" model="rs-00" kp="50.0" kd="4.0" lower="-3.14" upper="3.14" velocity_max="33.0" torque_max="14.0" kp_max="500.0" kd_max="5.0"/>
+      <xacro:if value="${with_official_gripper}">
+        <xacro:rebot_arm_rs_official_gripper_interfaces name="gripper_command_joint"/>
+      </xacro:if>
     </ros2_control>
   </xacro:macro>
 
-  <xacro:macro name="rebot_arm_rs_isaac_ros2_control" params="name">
+  <xacro:macro name="rebot_arm_rs_isaac_ros2_control" params="name with_official_gripper:=false">
     <ros2_control name="${name}" type="system">
       <hardware>
         <plugin>topic_based_ros2_control/TopicBasedSystem</plugin>
@@ -101,6 +135,9 @@
       <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint4" lower="-1.57" upper="1.57"/>
       <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint5" lower="-1.57" upper="1.57"/>
       <xacro:rebot_arm_rs_isaac_joint_interfaces name="joint6" lower="-3.14" upper="3.14"/>
+      <xacro:if value="${with_official_gripper}">
+        <xacro:rebot_arm_rs_isaac_joint_interfaces name="gripper_command_joint" lower="0.0" upper="1.0"/>
+      </xacro:if>
     </ros2_control>
   </xacro:macro>
 </robot>

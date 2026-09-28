@@ -22,6 +22,9 @@
   <exec_depend>mit_impedance_controller</exec_depend>
   <exec_depend>mit_position_adapter_controller</exec_depend>
 
+  <!-- Standard action controller for the optional official parallel gripper. -->
+  <exec_depend>parallel_gripper_controller</exec_depend>
+
   <!-- Generic bus ABI/runtime from the shared_can_hardware repository. -->
   <exec_depend>shared_can_interface</exec_depend>
   <exec_depend>shared_can_ros2</exec_depend>

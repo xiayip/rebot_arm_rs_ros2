@@ -79,6 +79,7 @@ def test_official_parallel_gripper_matches_upstream_model():
     joints = {joint.attrib['name']: joint for joint in robot.findall('joint')}
 
     assert {'gripper_end', 'gripper_left', 'gripper_right'} <= links.keys()
+    assert 'gripper_control_link' in links
 
     mount = joints['j_gripper_end']
     assert mount.attrib['type'] == 'fixed'
@@ -117,6 +118,17 @@ def test_official_parallel_gripper_matches_upstream_model():
         assert float(joint.find('limit').attrib['upper']) == upper
         assert float(joint.find('limit').attrib['effort']) == 500.0
         assert float(joint.find('limit').attrib['velocity']) == 10.0
+        mimic = joint.find('mimic')
+        assert mimic.attrib['joint'] == 'gripper_command_joint'
+        assert float(mimic.attrib['multiplier']) == -upper
+        assert float(mimic.attrib['offset']) == upper
+
+    command_joint = joints['gripper_command_joint']
+    assert command_joint.attrib['type'] == 'revolute'
+    assert command_joint.find('parent').attrib['link'] == 'gripper_end'
+    assert command_joint.find('child').attrib['link'] == 'gripper_control_link'
+    assert float(command_joint.find('limit').attrib['lower']) == 0.0
+    assert float(command_joint.find('limit').attrib['upper']) == 1.0
 
     assert float(links['gripper_end'].find('inertial/mass').attrib['value']) == 0.65
     assert float(links['gripper_left'].find('inertial/mass').attrib['value']) == 0.0752
@@ -125,7 +137,24 @@ def test_official_parallel_gripper_matches_upstream_model():
     control_joints = {
         joint.attrib['name'] for joint in robot.find('ros2_control').findall('joint')
     }
-    assert control_joints == ARM_JOINTS
+    assert control_joints == ARM_JOINTS | {'gripper_command_joint'}
+    control_gripper = robot.find(
+        "ros2_control/joint[@name='gripper_command_joint']"
+    )
+    assert {
+        interface.attrib['name']
+        for interface in control_gripper.findall('command_interface')
+    } == {'position', 'velocity'}
+    parameters = {
+        parameter.attrib['name']: parameter.text
+        for parameter in control_gripper.findall('param')
+    }
+    assert parameters['protocol_plugin'] == (
+        'rebot_robstride_protocol/RebotGripperProtocol'
+    )
+    assert parameters['motor_id'] == '0x07'
+    assert float(parameters['open_position']) == 5.0
+    assert float(parameters['closed_position']) == 0.0
 
 
 def test_official_parallel_gripper_meshes_are_packaged():

@@ -23,6 +23,20 @@ controller_manager:
     rebot_arm_rs_trajectory_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    rebot_arm_rs_gripper_controller:
+      type: parallel_gripper_action_controller/GripperActionController
+
+rebot_arm_rs_gripper_controller:
+  ros__parameters:
+    joint: gripper_command_joint
+    state_interfaces: [position, velocity]
+    max_velocity_interface: gripper_command_joint/velocity
+    max_velocity: 0.25
+    goal_tolerance: 0.02
+    stall_velocity_threshold: 0.002
+    stall_timeout: 2.0
+    allow_stalling: true
+
 rebot_arm_rs_mit_controller:
   ros__parameters:
     joints: [joint1, joint2, joint3, joint4, joint5, joint6]

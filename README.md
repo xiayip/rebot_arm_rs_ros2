@@ -13,7 +13,7 @@ hardware validation.
 | --- | --- |
 | `rebot_arm_rs` | Aggregate package |
 | `rebot_arm_rs_description` | Six-axis URDF/Xacro, optional official parallel gripper, and ros2_control description |
-| `rebot_robstride_protocol` | RobStride private-CAN codec and protocol plugin |
+| `rebot_robstride_protocol` | RobStride private-CAN codec plus arm and official-gripper protocol plugins |
 | `rebot_arm_rs_bringup` | Controller configuration and launch files |
 
 The six-axis URDF inertial data and aggregate meshes are synchronized from Seeed Studio's official
@@ -40,10 +40,15 @@ ros2 launch rebot_arm_rs_description view_robot.launch.py \
   description_file:=rebot_arm_rs_with_official_parallel_gripper.urdf.xacro
 ```
 
-The official model contains two independent prismatic finger joints, exactly as published by
-Seeed. They are descriptive joints only: the existing ros2_control hardware block continues to
-export `joint1` through `joint6` and does not claim a gripper motor protocol. For mock or real arm
-bringup, select the same description explicitly:
+The official model exposes one normalized actuator joint, `gripper_command_joint`, where `0.0` is
+fully open and `1.0` is fully closed. Its two published prismatic finger joints mimic that command,
+so RViz and TF follow the same normalized state used by ros2_control. The real-hardware description
+adds the official RS00 gripper as motor ID `7`; the protocol adapter maps the normalized range to
+the official motor endpoints (`5.0 rad` open, `0.0 rad` closed) while reusing the arm driver's MIT
+codec, startup checks, feedback and shutdown behavior.
+
+For mock or real arm bringup, select the gripper description explicitly. The gripper controller is
+then spawned and activated automatically:
 
 ```bash
 ros2 launch rebot_arm_rs_bringup mock.launch.py \
@@ -57,13 +62,40 @@ The default remains the arm with stock flange and no gripper, so existing launch
 downstream custom-flange compositions are unchanged. See
 `rebot_arm_rs_description/urdf/UPSTREAM.md` for pinned source and license details.
 
+The official gripper uses ros2_controllers'
+`parallel_gripper_action_controller/GripperActionController` and exposes the standard ROS 2
+`ParallelGripperCommand` action:
+
+```bash
+# Fully open the gripper at 25% normalized speed.
+ros2 action send_goal \
+  /rebot_arm_rs_gripper_controller/gripper_cmd \
+  control_msgs/action/ParallelGripperCommand \
+  "{command: {name: [gripper_command_joint], position: [0.0], velocity: [0.25]}}"
+
+# Fully close the gripper at 25% normalized speed.
+ros2 action send_goal \
+  /rebot_arm_rs_gripper_controller/gripper_cmd \
+  control_msgs/action/ParallelGripperCommand \
+  "{command: {name: [gripper_command_joint], position: [1.0], velocity: [0.25]}}"
+```
+
+Velocity is a normalized closing/opening rate in `[0, 1]` per second. The official RS00 adapter
+does not expose an effort command because a normalized grasp effort cannot be safely equated to MIT
+feed-forward torque without a separately validated force model. Gripper feedback is included in
+the regular `/joint_states` stream from `joint_state_broadcaster`; this controller intentionally
+does not provide the former `/rebot_arm_rs_gripper/gripper_command` or
+`/rebot_arm_rs_gripper/joint_states` compatibility topics. Because no effort command interface is
+exported, consumers should treat the upstream Jazzy controller's action-result `state.effort` field
+as unspecified and use `reached_goal`, `stalled`, and the position/velocity feedback instead.
+
 ## Repository dependencies
 
 The source is intentionally split into three repositories with one-way dependencies:
 
 ```text
 rebot_arm_rs_ros2
-├── zephyr_controllers       (MIT output, position adapter, damping and impedance)
+├── zephyr_controllers       (MIT controller stack)
 └── shared_can_hardware      (shared CAN ABI, bus manager and SocketCAN transport)
 ```
 

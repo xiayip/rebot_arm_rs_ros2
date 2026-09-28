@@ -15,6 +15,7 @@ find_package(shared_can_interface REQUIRED)
 add_library(${PROJECT_NAME} SHARED
   src/robstride_codec.cpp
   src/robstride_protocol.cpp
+  src/rebot_gripper_protocol.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -39,6 +40,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_startup_readiness test/test_startup_readiness.cpp)
   target_link_libraries(test_startup_readiness ${PROJECT_NAME})
   ament_target_dependencies(test_startup_readiness shared_can_interface)
+  ament_add_gtest(test_rebot_gripper_protocol test/test_rebot_gripper_protocol.cpp)
+  target_link_libraries(test_rebot_gripper_protocol ${PROJECT_NAME})
+  ament_target_dependencies(test_rebot_gripper_protocol shared_can_interface)
 endif()
 
 ament_export_include_directories(include)

@@ -3,7 +3,7 @@ project(rebot_arm_rs_description)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch meshes rviz urdf usd
+install(DIRECTORY LICENSES launch meshes rviz urdf usd
   DESTINATION share/${PROJECT_NAME}
 )
 

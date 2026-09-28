@@ -6,15 +6,25 @@ import pytest
 
 
 ARM_JOINTS = {f'joint{index}' for index in range(1, 7)}
+DESCRIPTION_ROOT = Path(__file__).parents[1]
+
+
+def expand_description(filename, *arguments):
+    result = subprocess.run(
+        ['xacro', str(DESCRIPTION_ROOT / 'urdf' / filename), *arguments],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return ET.fromstring(result.stdout)
 
 
 @pytest.mark.parametrize('mock', ['true', 'false'])
 def test_mit_interfaces(mock):
-    result = subprocess.run([
-        'xacro', str(Path(__file__).parents[1] / 'urdf/rebot_arm_rs.urdf.xacro'),
-        f'use_mock_hardware:={mock}',
-    ], check=True, capture_output=True, text=True)
-    control = ET.fromstring(result.stdout).find('ros2_control')
+    robot = expand_description(
+        'rebot_arm_rs.urdf.xacro', f'use_mock_hardware:={mock}'
+    )
+    control = robot.find('ros2_control')
     assert control.findtext('hardware/plugin') == (
         'mock_components/GenericSystem' if mock == 'true' else 'shared_can_ros2/CanSystem')
     joints = control.findall('joint')
@@ -28,20 +38,9 @@ def test_mit_interfaces(mock):
 
 
 def test_isaac_description_uses_standard_topic_based_interfaces():
-    xacro_file = (
-        Path(__file__).parents[1] / 'urdf' / 'rebot_arm_rs.urdf.xacro'
+    robot = expand_description(
+        'rebot_arm_rs.urdf.xacro', 'use_isaac_sim:=true'
     )
-    result = subprocess.run(
-        [
-            'xacro',
-            str(xacro_file),
-            'use_isaac_sim:=true',
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    robot = ET.fromstring(result.stdout)
     control = robot.find('ros2_control')
     assert control is not None
     assert control.findtext('hardware/plugin') == (
@@ -69,3 +68,102 @@ def test_isaac_description_uses_standard_topic_based_interfaces():
         assert {
             item.attrib['name'] for item in joint.findall('state_interface')
         } == {'position', 'velocity', 'effort'}
+
+
+def test_official_parallel_gripper_matches_upstream_model():
+    robot = expand_description(
+        'rebot_arm_rs_with_official_parallel_gripper.urdf.xacro',
+        'use_mock_hardware:=true',
+    )
+    links = {link.attrib['name']: link for link in robot.findall('link')}
+    joints = {joint.attrib['name']: joint for joint in robot.findall('joint')}
+
+    assert {'gripper_end', 'gripper_left', 'gripper_right'} <= links.keys()
+
+    mount = joints['j_gripper_end']
+    assert mount.attrib['type'] == 'fixed'
+    assert mount.find('parent').attrib['link'] == 'rebot_arm_rs_stock_flange_link'
+    assert mount.find('child').attrib['link'] == 'gripper_end'
+    assert [float(value) for value in mount.find('origin').attrib['xyz'].split()] == [
+        0.0, 0.0, 0.16621
+    ]
+    assert [float(value) for value in mount.find('origin').attrib['rpy'].split()] == [
+        3.1416, -1.5708, 0.0
+    ]
+
+    expected_fingers = {
+        'gripper_joint1': (
+            'gripper_left',
+            [-0.041939, -7.3385e-05, 0.0],
+            [1.5708, -1.5708, 0.0],
+            0.05,
+        ),
+        'gripper_joint2': (
+            'gripper_right',
+            [-0.041939, 7.3385e-05, 0.0],
+            [-1.5708, -1.5708, 0.0],
+            0.0715,
+        ),
+    }
+    for joint_name, (child, xyz, rpy, upper) in expected_fingers.items():
+        joint = joints[joint_name]
+        assert joint.attrib['type'] == 'prismatic'
+        assert joint.find('parent').attrib['link'] == 'gripper_end'
+        assert joint.find('child').attrib['link'] == child
+        assert [float(value) for value in joint.find('origin').attrib['xyz'].split()] == xyz
+        assert [float(value) for value in joint.find('origin').attrib['rpy'].split()] == rpy
+        assert joint.find('axis').attrib['xyz'] == '0 0 1'
+        assert float(joint.find('limit').attrib['lower']) == 0.0
+        assert float(joint.find('limit').attrib['upper']) == upper
+        assert float(joint.find('limit').attrib['effort']) == 500.0
+        assert float(joint.find('limit').attrib['velocity']) == 10.0
+
+    assert float(links['gripper_end'].find('inertial/mass').attrib['value']) == 0.65
+    assert float(links['gripper_left'].find('inertial/mass').attrib['value']) == 0.0752
+    assert float(links['gripper_right'].find('inertial/mass').attrib['value']) == 0.0752
+
+    control_joints = {
+        joint.attrib['name'] for joint in robot.find('ros2_control').findall('joint')
+    }
+    assert control_joints == ARM_JOINTS
+
+
+def test_official_parallel_gripper_meshes_are_packaged():
+    robot = expand_description(
+        'rebot_arm_rs_with_official_parallel_gripper.urdf.xacro',
+        'use_mock_hardware:=true',
+    )
+    package_prefix = (
+        'package://rebot_arm_rs_description/meshes/rebot_arm_rs/'
+        'official_parallel_gripper/'
+    )
+    mesh_names = {
+        mesh.attrib['filename'].removeprefix(package_prefix)
+        for mesh in robot.findall('.//mesh')
+        if mesh.attrib['filename'].startswith(package_prefix)
+    }
+    assert mesh_names == {
+        'cnc7.STL',
+        'cnc_left.STL',
+        'cnc_right.STL',
+        'gripper_end.STL',
+        'gripper_left.STL',
+        'gripper_right.STL',
+        'motor_7.STL',
+        'pla7_green.STL',
+        'pla_left.STL',
+        'pla_right.STL',
+    }
+    mesh_directory = (
+        DESCRIPTION_ROOT / 'meshes' / 'rebot_arm_rs' / 'official_parallel_gripper'
+    )
+    assert all((mesh_directory / mesh_name).is_file() for mesh_name in mesh_names)
+
+
+def test_default_description_remains_without_official_gripper():
+    robot = expand_description('rebot_arm_rs.urdf.xacro', 'use_mock_hardware:=true')
+    link_names = {link.attrib['name'] for link in robot.findall('link')}
+    joint_names = {joint.attrib['name'] for joint in robot.findall('joint')}
+    assert 'gripper_end' not in link_names
+    assert 'gripper_joint1' not in joint_names
+    assert 'gripper_joint2' not in joint_names

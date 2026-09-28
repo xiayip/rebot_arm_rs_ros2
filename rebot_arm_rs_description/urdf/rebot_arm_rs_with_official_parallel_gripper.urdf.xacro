@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rebot_arm_rs_with_official_parallel_gripper">
+  <xacro:arg name="use_mock_hardware" default="false"/>
+  <xacro:arg name="use_isaac_sim" default="false"/>
+  <xacro:arg name="mock_sensor_commands" default="false"/>
+  <xacro:arg name="can_interface" default="can1"/>
+
+  <xacro:include filename="$(find rebot_arm_rs_description)/urdf/rebot_arm_rs/rebot_arm_rs_macro.urdf.xacro"/>
+  <xacro:include filename="$(find rebot_arm_rs_description)/urdf/rebot_arm_rs/rebot_arm_rs_stock_flange_macro.urdf.xacro"/>
+  <xacro:include filename="$(find rebot_arm_rs_description)/urdf/rebot_arm_rs/rebot_arm_rs_official_parallel_gripper_macro.urdf.xacro"/>
+  <xacro:include filename="$(find rebot_arm_rs_description)/urdf/rebot_arm_rs/rebot_arm_rs.ros2_control.xacro"/>
+
+  <xacro:rebot_arm_rs/>
+  <xacro:rebot_arm_rs_stock_flange parent="link6"/>
+  <xacro:rebot_arm_rs_official_parallel_gripper parent="rebot_arm_rs_stock_flange_link"/>
+  <xacro:if value="$(arg use_isaac_sim)">
+    <xacro:rebot_arm_rs_isaac_ros2_control name="RebotArmRsSystem"/>
+  </xacro:if>
+  <xacro:unless value="$(arg use_isaac_sim)">
+    <xacro:rebot_arm_rs_ros2_control
+      name="RebotArmRsSystem"
+      use_mock_hardware="$(arg use_mock_hardware)"
+      mock_sensor_commands="$(arg mock_sensor_commands)"
+      can_interface="$(arg can_interface)"/>
+  </xacro:unless>
+</robot>

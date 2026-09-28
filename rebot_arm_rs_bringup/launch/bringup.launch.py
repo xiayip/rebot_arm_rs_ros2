@@ -12,9 +12,10 @@ def generate_launch_description():
     use_mock_hardware = LaunchConfiguration("use_mock_hardware")
     can_interface = LaunchConfiguration("can_interface")
     activate_trajectory = LaunchConfiguration("activate_trajectory_controller")
+    description_file = LaunchConfiguration("description_file")
 
     xacro_file = PathJoinSubstitution(
-        [FindPackageShare("rebot_arm_rs_description"), "urdf", "rebot_arm_rs.urdf.xacro"]
+        [FindPackageShare("rebot_arm_rs_description"), "urdf", description_file]
     )
     controller_file = PathJoinSubstitution(
         [FindPackageShare("rebot_arm_rs_bringup"), "config", "controllers.yaml"]
@@ -121,6 +122,11 @@ def generate_launch_description():
             DeclareLaunchArgument("use_mock_hardware", default_value="false"),
             DeclareLaunchArgument("can_interface", default_value="can1"),
             DeclareLaunchArgument("activate_trajectory_controller", default_value="false"),
+            DeclareLaunchArgument(
+                "description_file",
+                default_value="rebot_arm_rs.urdf.xacro",
+                description="Xacro filename from rebot_arm_rs_description/urdf.",
+            ),
             robot_state_publisher,
             impedance_trajectory_guard,
             control_node,

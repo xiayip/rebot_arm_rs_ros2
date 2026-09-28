@@ -3,9 +3,11 @@
 <package format="3">
   <name>rebot_arm_rs_description</name>
   <version>0.1.0</version>
-  <description>URDF and ros2_control description for the six-axis reBot Arm B601-RS.</description>
+  <description>URDF and ros2_control descriptions for the reBot Arm B601-RS, including the optional official parallel gripper.</description>
   <maintainer email="yipeng.xia@hotmail.com">reBot ARM RS Developers</maintainer>
   <license>Apache-2.0</license>
+  <!-- See LICENSES/CERN-OHL-W-2.0.txt for the official Seeed gripper hardware assets. -->
+  <license>CERN-OHL-W-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

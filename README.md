@@ -12,13 +12,13 @@ hardware validation.
 | Package | Purpose |
 | --- | --- |
 | `rebot_arm_rs` | Aggregate package |
-| `rebot_arm_rs_description` | Six-axis URDF/Xacro and ros2_control description |
+| `rebot_arm_rs_description` | Six-axis URDF/Xacro, optional official parallel gripper, and ros2_control description |
 | `rebot_robstride_protocol` | RobStride private-CAN codec and protocol plugin |
 | `rebot_arm_rs_bringup` | Controller configuration and launch files |
 
 The six-axis URDF inertial data and aggregate meshes are synchronized from Seeed Studio's official
 RS CAD export. See `rebot_arm_rs_description/urdf/UPSTREAM.md` for the pinned upstream commit,
-checksums, and the no-gripper adaptation policy.
+checksums, and the optional-gripper composition policy.
 
 ## Description composition
 
@@ -31,6 +31,31 @@ its default appearance and dynamics include the stock flange.
 Robot-specific packages can include only the arm core and attach another flange to `link6`. This
 keeps `joint6`, TF names, and ros2_control interfaces stable while allowing the complete physical
 flange model to change without adding downstream dependencies to this repository.
+
+An additional `rebot_arm_rs_with_official_parallel_gripper.urdf.xacro` entry point composes the
+same arm core with the stock flange and Seeed's official parallel gripper. Preview it with:
+
+```bash
+ros2 launch rebot_arm_rs_description view_robot.launch.py \
+  description_file:=rebot_arm_rs_with_official_parallel_gripper.urdf.xacro
+```
+
+The official model contains two independent prismatic finger joints, exactly as published by
+Seeed. They are descriptive joints only: the existing ros2_control hardware block continues to
+export `joint1` through `joint6` and does not claim a gripper motor protocol. For mock or real arm
+bringup, select the same description explicitly:
+
+```bash
+ros2 launch rebot_arm_rs_bringup mock.launch.py \
+  description_file:=rebot_arm_rs_with_official_parallel_gripper.urdf.xacro
+
+ros2 launch rebot_arm_rs_bringup real_world.launch.py \
+  description_file:=rebot_arm_rs_with_official_parallel_gripper.urdf.xacro
+```
+
+The default remains the arm with stock flange and no gripper, so existing launch behavior and
+downstream custom-flange compositions are unchanged. See
+`rebot_arm_rs_description/urdf/UPSTREAM.md` for pinned source and license details.
 
 ## Repository dependencies
 
@@ -234,5 +259,6 @@ ros2 action send_goal \
 
 ## Source references
 
-- Seeed B601-RS URDF kinematics and meshes: `Seeed-Projects/reBotArmController_ROS2`
+- Seeed B601-RS URDF kinematics and arm meshes: `Seeed-Projects/reBotArmController_ROS2`
+- Seeed official parallel-gripper URDF and meshes: `Seeed-Projects/reBot-DevArm`
 - RobStride private CAN protocol behavior: RobStride manuals and MotorBridge 0.5.1

@@ -20,9 +20,36 @@ material assignments, and palette RGBA values match the upstream model numerical
 `rebot_arm_rs_stock_flange` macro. Its fixed attachment to the empty `link6` output frame is
 kinematically and dynamically equivalent to the original model while allowing flange replacement.
 
-The upstream source includes a motorized gripper. This robot currently has no gripper, so the
-standalone description ends at the stock flange's `tool0` frame; the upstream gripper root,
-gripper links, inertials, joints, and meshes are intentionally omitted.
+The default standalone description still ends at the stock flange's `tool0` frame. The optional
+`rebot_arm_rs_with_official_parallel_gripper.urdf.xacro` composes the same six-axis core and stock
+flange with Seeed's official parallel gripper.
+
+## Official parallel gripper
+
+The optional gripper model is synchronized from Seeed Studio's hardware-design repository:
+
+- Repository: `https://github.com/Seeed-Projects/reBot-DevArm`
+- Upstream branch: `main`
+- Verified upstream HEAD: `cfdc0a92312ae232d0fdb98fff847269a382380a`
+- Source URDF: `Rebot_Arm_description/RS/urdf/ReBot_Arm_RS.urdf`
+- Source URDF SHA-256: `3838ca8f9d586be22a89b33c7cbdd4abd43d4a92a2de377b294eef4c5bd7654d`
+- Source meshes: `Rebot_Arm_description/RS/meshes/{shared,visual}`
+- Hardware-design license: `CERN-OHL-W-2.0`
+- Synchronization date: 2026-09-28
+
+The gripper body and finger inertials, the flange-to-gripper transform, both prismatic joints,
+their axes and limits, collision meshes, visual meshes, and material assignments match that source.
+Because this package models the upstream physical `link6` as the separate
+`rebot_arm_rs_stock_flange_link`, the gripper's fixed joint is attached to that link instead of the
+empty, stable `link6` output frame. This is kinematically and dynamically equivalent to the source.
+
+The only presentation change is that each visual component is placed on a zero-offset fixed child
+link. This works around differing multi-visual material handling among URDF consumers and does not
+change the physical model. The imported assets and this modification are distributed under
+`LICENSES/CERN-OHL-W-2.0.txt`; the rest of this ROS integration retains its declared licenses.
+
+The source defines two independent prismatic finger joints and no mimic relation. This package
+preserves that definition and does not invent a gripper ros2_control interface or motor protocol.
 
 ## Local ROS 2 extensions
 

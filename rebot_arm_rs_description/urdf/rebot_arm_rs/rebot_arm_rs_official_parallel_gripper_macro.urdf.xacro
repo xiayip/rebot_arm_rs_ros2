@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    Seeed's official B601-RS parallel gripper. Geometry, inertial data,
+    kinematics, and limits are synchronized from reBot-DevArm. The visual
+    meshes are represented by fixed child links so RViz preserves each
+    component's material; this does not change the physical model.
+
+    The parent must be the stock physical flange link, not tool0. The official
+    source attaches the gripper to the physical link6 origin, while this
+    package keeps that body in rebot_arm_rs_stock_flange_link.
+  -->
+
+  <xacro:macro name="rebot_arm_rs_official_gripper_visual"
+               params="parent name mesh material rgba">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/official_parallel_gripper/${mesh}"/>
+        </geometry>
+        <material name="${material}">
+          <color rgba="${rgba}"/>
+        </material>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rebot_arm_rs_official_parallel_gripper"
+               params="parent prefix:=''">
+    <link name="${prefix}gripper_end">
+      <inertial>
+        <origin xyz="-0.112751692515958 0.000128443070436966 -5.72602449749882E-06"
+                rpy="0 0 0"/>
+        <mass value="0.65"/>
+        <inertia
+          ixx="0.00037354" ixy="-0.00000011" ixz="0.00000050"
+          iyy="0.00015830" iyz="0.00000348" izz="0.00045353"/>
+      </inertial>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/official_parallel_gripper/gripper_end.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_end" name="${prefix}gripper_end_pla_visual"
+      mesh="pla7_green.STL" material="rs_seeed_green" rgba="0.725 0.835 0.118 1"/>
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_end" name="${prefix}gripper_end_cnc_visual"
+      mesh="cnc7.STL" material="rs_anodized_silver" rgba="0.720 0.760 0.730 1"/>
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_end" name="${prefix}gripper_end_motor_visual"
+      mesh="motor_7.STL" material="rs_motor_black" rgba="0.045 0.052 0.049 1"/>
+
+    <joint name="${prefix}j_gripper_end" type="fixed">
+      <origin xyz="0 0 0.16621" rpy="3.1416 -1.5708 0"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}gripper_end"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}gripper_left">
+      <inertial>
+        <origin xyz="-0.00218008703135955 0.0187090355934181 0.00932188568692145"
+                rpy="0 0 0"/>
+        <mass value="0.0752"/>
+        <inertia
+          ixx="1.09877964176176E-05" ixy="0" ixz="0"
+          iyy="9.50146036720166E-06" iyz="0" izz="9.30779991911125E-06"/>
+      </inertial>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/official_parallel_gripper/gripper_left.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_left" name="${prefix}gripper_left_pla_visual"
+      mesh="pla_left.STL" material="rs_pla_black" rgba="0.090 0.106 0.102 1"/>
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_left" name="${prefix}gripper_left_cnc_visual"
+      mesh="cnc_left.STL" material="rs_anodized_silver" rgba="0.720 0.760 0.730 1"/>
+
+    <joint name="${prefix}gripper_joint1" type="prismatic">
+      <origin xyz="-0.041939 -7.3385E-05 0" rpy="1.5708 -1.5708 0"/>
+      <parent link="${prefix}gripper_end"/>
+      <child link="${prefix}gripper_left"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="0" upper="0.05" effort="500" velocity="10"/>
+    </joint>
+
+    <link name="${prefix}gripper_right">
+      <inertial>
+        <origin xyz="0.00218008703135955 -0.018709035593418 0.00932188568692151"
+                rpy="0 0 0"/>
+        <mass value="0.0752"/>
+        <inertia
+          ixx="1.09877964176176E-05" ixy="0" ixz="0"
+          iyy="9.50146036720166E-06" iyz="0" izz="9.30779991911125E-06"/>
+      </inertial>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/official_parallel_gripper/gripper_right.STL"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_right" name="${prefix}gripper_right_pla_visual"
+      mesh="pla_right.STL" material="rs_pla_black" rgba="0.090 0.106 0.102 1"/>
+    <xacro:rebot_arm_rs_official_gripper_visual
+      parent="${prefix}gripper_right" name="${prefix}gripper_right_cnc_visual"
+      mesh="cnc_right.STL" material="rs_anodized_silver" rgba="0.720 0.760 0.730 1"/>
+
+    <joint name="${prefix}gripper_joint2" type="prismatic">
+      <origin xyz="-0.041939 7.3385E-05 0" rpy="-1.5708 -1.5708 0"/>
+      <parent link="${prefix}gripper_end"/>
+      <child link="${prefix}gripper_right"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="0" upper="0.0715" effort="500" velocity="10"/>
+    </joint>
+  </xacro:macro>
+</robot>

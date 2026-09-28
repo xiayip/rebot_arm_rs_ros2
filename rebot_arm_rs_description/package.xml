@@ -12,6 +12,8 @@
   <exec_depend>joint_state_publisher_gui</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>rviz2</exec_depend>
+  <!-- The real-hardware ros2_control Xacro names shared_can_ros2/CanSystem. -->
+  <exec_depend>shared_can_ros2</exec_depend>
   <exec_depend>topic_based_ros2_control</exec_depend>
   <exec_depend>xacro</exec_depend>
 

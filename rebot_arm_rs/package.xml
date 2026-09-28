@@ -9,9 +9,20 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- Product-owned packages from this repository. -->
   <exec_depend>rebot_arm_rs_bringup</exec_depend>
   <exec_depend>rebot_arm_rs_description</exec_depend>
   <exec_depend>rebot_robstride_protocol</exec_depend>
+
+  <!-- Generic MIT controller subset from the zephyr_controllers repository.
+       Depend on individual packages instead of its broad meta-package. -->
+  <exec_depend>gravity_compensation_model</exec_depend>
+  <exec_depend>mit_controller</exec_depend>
+  <exec_depend>mit_damping_controller</exec_depend>
+  <exec_depend>mit_impedance_controller</exec_depend>
+  <exec_depend>mit_position_adapter_controller</exec_depend>
+
+  <!-- Generic bus ABI/runtime from the shared_can_hardware repository. -->
   <exec_depend>shared_can_interface</exec_depend>
   <exec_depend>shared_can_ros2</exec_depend>
 

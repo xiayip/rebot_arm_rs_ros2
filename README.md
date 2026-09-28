@@ -32,15 +32,43 @@ Robot-specific packages can include only the arm core and attach another flange 
 keeps `joint6`, TF names, and ros2_control interfaces stable while allowing the complete physical
 flange model to change without adding downstream dependencies to this repository.
 
-## Dependency
+## Repository dependencies
 
-The ROS 2 workspace must also contain the `shared_can_hardware` repository. It provides:
+The source is intentionally split into three repositories with one-way dependencies:
 
-- `shared_can_interface`: the versioned transport/protocol ABI used by the RobStride plugin.
-- `shared_can_ros2`: the generic ros2_control bus manager and SocketCAN transport.
+```text
+rebot_arm_rs_ros2
+├── zephyr_controllers       (MIT output, position adapter, damping and impedance)
+└── shared_can_hardware      (shared CAN ABI, bus manager and SocketCAN transport)
+```
 
-See that repository's README for the shared-bus architecture, plugin contract, and instructions for
-adding another motor, gripper, hand, or sensor protocol.
+`zephyr_controllers` and `shared_can_hardware` do not depend on this repository or on each other.
+They communicate through standard ros2_control command/state interfaces, so either lower layer can
+be reused by another robot or hardware implementation.
+
+This repository owns only the reBot-specific integration:
+
+- `rebot_arm_rs_description`: robot model and ros2_control hardware description.
+- `rebot_robstride_protocol`: the RobStride protocol plugin for `shared_can_interface`.
+- `rebot_arm_rs_bringup`: controller instances, calibrated gains, gravity/friction parameters and
+  launch files.
+
+The `rebot_arm_rs` aggregate package declares the exact MIT controller subset it needs instead of
+depending on the full `zephyr_controllers` meta-package. This avoids installing unrelated base,
+hand, gripper and diagnostic controllers.
+
+For a source workspace, clone this repository first and import its two project dependencies:
+
+```bash
+mkdir -p ~/rebot_ws/src
+cd ~/rebot_ws/src
+git clone https://jihulab.com/robot_group/zephyr_common/rebot_arm_rs_ros2.git
+cd ~/rebot_ws
+vcs import src < src/rebot_arm_rs_ros2/rebot_arm_rs_jazzy.repos
+```
+
+`rebot_arm_rs_jazzy.repos` follows the active `main` branches. Release snapshots should replace
+those branch names with compatible immutable tags or commit hashes.
 
 ## Hardware startup behavior
 
@@ -123,6 +151,7 @@ MotorBridge Gateway and this hardware plugin must not control the same CAN bus a
 ```bash
 source /opt/ros/jazzy/setup.bash
 cd ~/ros2_ws
+vcs import src < src/rebot_arm_rs_ros2/rebot_arm_rs_jazzy.repos
 rosdep install --from-paths src --ignore-src --rosdistro jazzy -r -y
 colcon build --symlink-install --packages-up-to rebot_arm_rs
 source install/setup.bash

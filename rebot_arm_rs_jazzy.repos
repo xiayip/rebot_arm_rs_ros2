@@ -1,0 +1,9 @@
+repositories:
+  shared_can_hardware:
+    type: git
+    url: https://jihulab.com/robot_group/zephyr_common/shared_can_hardware.git
+    version: main
+  zephyr_controllers:
+    type: git
+    url: https://jihulab.com/robot_group/zephyr_common/zephyr_controllers.git
+    version: main

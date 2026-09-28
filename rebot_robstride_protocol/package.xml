@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>pluginlib</depend>
+  <!-- Stable device-protocol ABI supplied by shared_can_hardware. -->
   <depend>shared_can_interface</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>

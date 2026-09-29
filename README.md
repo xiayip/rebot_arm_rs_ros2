@@ -26,6 +26,14 @@ development and hardware validation.
 - Replaceable flange composition and an optional official Seeed parallel-gripper model.
 - Standard `ParallelGripperCommand` action for the optional official gripper.
 
+## Screenshots
+
+| Stock flange (`view_robot.launch.py`) | Official parallel gripper |
+| :---: | :---: |
+| ![reBot Arm B601-RS stock flange in RViz](docs/images/rviz-stock.png) | ![reBot Arm B601-RS with the official parallel gripper in RViz](docs/images/rviz-official-parallel-gripper.png) |
+| Mock-hardware JTC trajectory | Isaac Sim stage and ROS 2 control graph |
+| ![Mock-hardware trajectory result in RViz](docs/images/mock-trajectory.png) | ![reBot Arm B601-RS loaded in Isaac Sim](docs/images/isaac-sim.png) |
+
 ## Supported target
 
 | Component | Current target |
@@ -189,12 +197,70 @@ torque. Use independent mechanical support whenever loss of holding torque could
 The real-hardware stack uses chainable controllers rather than sending trajectories directly to
 the motor protocol:
 
-```text
-JointTrajectoryController
-  -> MIT position adapter (gains + gravity feed-forward)
-  -> MIT output controller
-  -> ros2_control hardware -> SocketCAN -> RobStride motors
+```mermaid
+flowchart TB
+  SELECT["controller_manager<br/>activates exactly one upstream mode"]
+
+  subgraph INPUTS["Command inputs"]
+    POS_ACTION["FollowJointTrajectory<br/>rebot_arm_rs_trajectory_controller"]
+    IMP_ACTION["FollowJointTrajectory<br/>rebot_arm_rs_impedance_trajectory_controller"]
+    IMP_TOPIC["Optional equilibrium reference<br/>impedance controller ~/commands"]
+    DAMP_MODE["Damping-mode activation<br/>uses the measured pose"]
+  end
+
+  subgraph UPSTREAM["Chainable ros2_control controllers"]
+    POS_JTC["rebot_arm_rs_trajectory_controller<br/>JTC: q_ref, dq_ref"]
+    POS_ADAPTER["rebot_arm_rs_position_adapter<br/>Kp/Kd + model feed-forward"]
+    DAMP["rebot_arm_rs_damping_controller<br/>gravity + ROS-side damping + soft limits"]
+    IMP_JTC["rebot_arm_rs_impedance_trajectory_controller<br/>JTC: equilibrium q_ref, dq_ref"]
+    IMP["rebot_arm_rs_impedance_controller<br/>stiffness/damping + feed-forward"]
+  end
+
+  POS_ACTION --> POS_JTC --> POS_ADAPTER
+  DAMP_MODE --> DAMP
+  IMP_ACTION --> IMP_JTC --> IMP
+  IMP_TOPIC --> IMP
+
+  SELECT -. "switch" .-> POS_ADAPTER
+  SELECT -. "switch" .-> DAMP
+  SELECT -. "switch" .-> IMP
+
+  POS_ADAPTER --> MIT
+  DAMP --> MIT
+  IMP --> MIT
+
+  MIT["rebot_arm_rs_mit_controller<br/>validate references and provide HOLD fallback"]
+  TUPLE["Per-joint MIT tuple<br/>q_des, dq_des, kp, kd, tau_ff"]
+  HW["shared_can_ros2 / CanSystem<br/>ros2_control command interfaces"]
+  CODEC["rebot_robstride_protocol<br/>MIT encode / status decode"]
+  CAN["Shared CAN bus manager<br/>Linux SocketCAN"]
+  MOTOR["RobStride RS-06 / RS-00<br/>motor-side MIT loop"]
+
+  MIT --> TUPLE --> HW --> CODEC
+  CODEC -->|"MIT command frames"| CAN --> MOTOR
+
+  STATE["ros2_control state interfaces<br/>q, dq, effort, temperature, faults"]
+  MOTOR -. "operation-status CAN frames<br/>SocketCAN -> protocol decode -> CanSystem" .-> STATE
+  STATE --> POS_JTC
+  STATE --> POS_ADAPTER
+  STATE --> DAMP
+  STATE --> IMP
+  STATE --> JSB["joint_state_broadcaster<br/>/joint_states"]
+
+  URDF["robot_description<br/>inertials and joint limits"] --> GRAV["Pinocchio gravity model<br/>g(q)"]
+  STATE --> GRAV
+  GRAV --> POS_ADAPTER
+  GRAV --> DAMP
+  GRAV --> IMP
 ```
+
+The three upstream branches are mutually exclusive; the MIT output controller remains active as
+their common final stage. It validates and writes one complete command tuple per joint. The motor
+firmware then evaluates the MIT law
+`tau = kp * (q_des - q) + kd * (dq_des - dq) + tau_ff`. Position and impedance modes place their
+configured gains in the motor-side `kp`/`kd` fields. Damping mode instead computes damping torque
+from measured velocity in the ROS realtime loop and carries it in `tau_ff`, together with gravity
+and soft-limit torque.
 
 | Mode | Active high-level controllers | Intended use |
 | --- | --- | --- |

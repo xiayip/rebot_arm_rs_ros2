@@ -23,6 +23,14 @@ BOM、装配资料和产品文档；本仓库是独立维护的 B601-RS ROS 2 �
 - 法兰可组合替换，并提供可选的 Seeed 官方平行夹爪模型。
 - 官方平行夹爪使用标准 `ParallelGripperCommand` action。
 
+## 运行截图
+
+| 原装法兰（`view_robot.launch.py`） | Seeed 官方平行夹爪 |
+| :---: | :---: |
+| ![RViz 中的 reBot Arm B601-RS 原装法兰模型](docs/images/rviz-stock.png) | ![RViz 中安装官方平行夹爪的 reBot Arm B601-RS](docs/images/rviz-official-parallel-gripper.png) |
+| Mock hardware JTC 轨迹 | Isaac Sim 场景与 ROS 2 控制图 |
+| ![RViz 中的 mock hardware 轨迹结果](docs/images/mock-trajectory.png) | ![Isaac Sim 中加载的 reBot Arm B601-RS](docs/images/isaac-sim.png) |
+
 ## 当前支持范围
 
 | 项目 | 当前目标 |
@@ -164,12 +172,68 @@ vcs import src < src/rebot_arm_rs_ros2/rebot_arm_rs_jazzy.repos
 
 真机控制通过链式控制器完成，轨迹不会直接进入电机协议：
 
-```text
-JointTrajectoryController
-  -> MIT 位置适配器（增益 + 重力前馈）
-  -> MIT 输出控制器
-  -> ros2_control 硬件 -> SocketCAN -> RobStride 电机
+```mermaid
+flowchart TB
+  SELECT["controller_manager<br/>任一时刻只激活一种上游模式"]
+
+  subgraph INPUTS["控制指令入口"]
+    POS_ACTION["FollowJointTrajectory<br/>rebot_arm_rs_trajectory_controller"]
+    IMP_ACTION["FollowJointTrajectory<br/>rebot_arm_rs_impedance_trajectory_controller"]
+    IMP_TOPIC["可选平衡点 reference<br/>阻抗控制器 ~/commands"]
+    DAMP_MODE["激活阻尼模式<br/>以实测姿态为初始参考"]
+  end
+
+  subgraph UPSTREAM["可链式 ros2_control 控制器"]
+    POS_JTC["rebot_arm_rs_trajectory_controller<br/>JTC：q_ref, dq_ref"]
+    POS_ADAPTER["rebot_arm_rs_position_adapter<br/>Kp/Kd + 模型前馈"]
+    DAMP["rebot_arm_rs_damping_controller<br/>重力 + ROS 侧阻尼 + 软限位"]
+    IMP_JTC["rebot_arm_rs_impedance_trajectory_controller<br/>JTC：平衡点 q_ref, dq_ref"]
+    IMP["rebot_arm_rs_impedance_controller<br/>刚度/阻尼 + 前馈"]
+  end
+
+  POS_ACTION --> POS_JTC --> POS_ADAPTER
+  DAMP_MODE --> DAMP
+  IMP_ACTION --> IMP_JTC --> IMP
+  IMP_TOPIC --> IMP
+
+  SELECT -. "切换" .-> POS_ADAPTER
+  SELECT -. "切换" .-> DAMP
+  SELECT -. "切换" .-> IMP
+
+  POS_ADAPTER --> MIT
+  DAMP --> MIT
+  IMP --> MIT
+
+  MIT["rebot_arm_rs_mit_controller<br/>reference 校验与 HOLD 回退"]
+  TUPLE["逐关节 MIT 五元组<br/>q_des, dq_des, kp, kd, tau_ff"]
+  HW["shared_can_ros2 / CanSystem<br/>ros2_control command interface"]
+  CODEC["rebot_robstride_protocol<br/>MIT 编码 / 状态解码"]
+  CAN["共享 CAN 总线管理器<br/>Linux SocketCAN"]
+  MOTOR["RobStride RS-06 / RS-00<br/>电机侧 MIT 环"]
+
+  MIT --> TUPLE --> HW --> CODEC
+  CODEC -->|"MIT 控制帧"| CAN --> MOTOR
+
+  STATE["ros2_control state interface<br/>q, dq, effort, temperature, fault"]
+  MOTOR -. "运行状态 CAN 帧<br/>SocketCAN -> 协议解码 -> CanSystem" .-> STATE
+  STATE --> POS_JTC
+  STATE --> POS_ADAPTER
+  STATE --> DAMP
+  STATE --> IMP
+  STATE --> JSB["joint_state_broadcaster<br/>/joint_states"]
+
+  URDF["robot_description<br/>惯量与关节限位"] --> GRAV["Pinocchio 重力模型<br/>g(q)"]
+  STATE --> GRAV
+  GRAV --> POS_ADAPTER
+  GRAV --> DAMP
+  GRAV --> IMP
 ```
+
+三条上游控制链互斥激活，MIT 输出控制器作为共用末级保持激活。它会校验每个关节完整的 MIT 五元组并
+写入硬件接口，电机固件最终执行
+`tau = kp * (q_des - q) + kd * (dq_des - dq) + tau_ff`。位置和阻抗模式把配置的增益写入电机侧
+`kp`/`kd`；阻尼模式则在 ROS 实时循环中根据实测速度计算阻尼力矩，并与重力、软限位力矩一起通过
+`tau_ff` 下发。
 
 | 模式 | 激活的上层控制器 | 用途 |
 | --- | --- | --- |

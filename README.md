@@ -34,6 +34,15 @@ development and hardware validation.
 | Mock-hardware JTC trajectory | Isaac Sim stage and ROS 2 control graph |
 | ![Mock-hardware trajectory result in RViz](docs/images/mock-trajectory.png) | ![reBot Arm B601-RS loaded in Isaac Sim](docs/images/isaac-sim.png) |
 
+### Controller demonstrations
+
+Click an animated preview to open the full H.264 video.
+
+| Damping mode | Impedance mode |
+| :---: | :---: |
+| [![Damping-mode demonstration](docs/media/damping-mode.gif)](docs/media/damping-mode.mp4) | [![Impedance-mode demonstration](docs/media/impedance-mode.gif)](docs/media/impedance-mode.mp4) |
+| Gravity-compensated, backdrivable manual guidance | Compliant recovery after an external disturbance |
+
 ## Supported target
 
 | Component | Current target |

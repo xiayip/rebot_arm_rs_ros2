@@ -31,6 +31,15 @@ BOM、装配资料和产品文档；本仓库是独立维护的 B601-RS ROS 2 �
 | Mock hardware JTC 轨迹 | Isaac Sim 场景与 ROS 2 控制图 |
 | ![RViz 中的 mock hardware 轨迹结果](docs/images/mock-trajectory.png) | ![Isaac Sim 中加载的 reBot Arm B601-RS](docs/images/isaac-sim.png) |
 
+### 控制器演示
+
+点击动画预览可打开完整的 H.264 视频。
+
+| 阻尼模式 | 阻抗模式 |
+| :---: | :---: |
+| [![阻尼模式演示](docs/media/damping-mode.gif)](docs/media/damping-mode.mp4) | [![阻抗模式演示](docs/media/impedance-mode.gif)](docs/media/impedance-mode.mp4) |
+| 带重力补偿、可反驱的手动拖动 | 受到外力扰动后的柔顺回位 |
+
 ## 当前支持范围
 
 | 项目 | 当前目标 |

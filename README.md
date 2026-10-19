@@ -549,3 +549,44 @@ colcon test-result --verbose
 Hardware changes should include the tested arm configuration, firmware version, CAN capture or
 relevant controller telemetry, exact commands, and whether the result was obtained on mock,
 simulation, or physical hardware. Never report an unexecuted hardware test as successful.
+
+## HMI controller switching in MONITOR
+
+The optional `rebot_arm_hmi_bridge` package connects HMI firmware 0.31.0's
+`MONITOR → ROS MODE` menu to controller_manager. It supports the existing
+position trajectory, damping and impedance trajectory chains. A request uses
+STRICT switching and reports success only after a fresh controller-list query
+confirms the target chain. The base MIT controller, joint-state broadcaster and
+gripper are preserved. It does not send motor commands or change joint gains.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-select rebot_arm_hmi_bridge --symlink-install
+source install/setup.bash
+ros2 run rebot_arm_hmi_bridge hmi_bridge --ros-args \
+  -p can_interface:=can0 -p controller_manager:=/controller_manager \
+  -p controller_namespace:=/
+```
+
+Only one bridge may run on a bus. The CAN interface must already be configured
+at 1 Mbit/s and accessible to the node, with the same ROS domain as the manager.
+Start the existing arm stack first; one complete supported chain and the base
+MIT controller must be active, and target controllers must be configured.
+
+Active FollowJointTrajectory goals are rejected without cancellation. Fresh,
+stationary JTC telemetry is also required. Direct `joint_trajectory` publishers
+block switching because their complete trajectory lifecycle cannot be queried;
+use the action interface and stop direct topic publishers. Other ROS clients
+must serialize new goals and switch requests with HMI switching: preflight and
+switch_controller are not an atomic cross-client transaction.
+
+Requests carry single-use 32-bit tokens; duplicates return cached results.
+Timeouts do not trigger retries, cancellation or rollback. Unresolved timed-out
+services quarantine further switching until their outcome is queried. The
+bridge's 200 ms heartbeat prevents entry into HMI's local MASTER/TEACH idle gate;
+stop the bridge and PC motor command stream before using those local modes.
+
+See [Chinese deployment and test instructions](README.zh-CN.md#hmi-monitor--ros-mode-控制器切换)
+and the canonical [HMI CAN protocol specification](https://jihulab.com/robot_group/zephyr_embedding/arm_hmi_node/-/blob/main/README.md#ros-mode-主站通信协议-v1)
+for frame layouts (standard IDs 0x6F0–0x6F2), result codes, timing, limitations and
+read-only diagnostics. Physical switching tests are pending firmware deployment.

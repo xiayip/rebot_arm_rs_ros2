@@ -11,6 +11,7 @@
 
   <!-- Product-owned packages from this repository. -->
   <exec_depend>rebot_arm_rs_bringup</exec_depend>
+  <exec_depend>rebot_arm_hmi_bridge</exec_depend>
   <exec_depend>rebot_arm_rs_description</exec_depend>
   <exec_depend>rebot_robstride_protocol</exec_depend>
 

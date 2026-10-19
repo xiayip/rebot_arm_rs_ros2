@@ -483,3 +483,53 @@ colcon test-result --verbose
 
 涉及真机的修改应同时提供：被测机械臂配置、固件版本、CAN 抓包或相关控制器遥测、精确测试命令，以及
 测试是在 mock、仿真还是真机上完成。未实际执行的真机测试不得报告为成功。
+
+## HMI MONITOR / ROS MODE 控制器切换
+
+新增独立包 `rebot_arm_hmi_bridge`，将 HMI 固件 0.31.0 的标准 CAN 应用请求转换为 ROS 2 controller_manager 服务调用。启动桥接不会主动切换控制器；只在 HMI 的 `MONITOR → ROS MODE` 确认之后执行。原配置中的底层 `rebot_arm_rs_mit_controller` 必须 active，位置/阻尼/阻抗三种模式必须有且仅有一个完整组合 active，其余目标控制器已加载为 inactive。
+
+```bash
+cd ~/code/zephyr_ws  # 容器内使用对应 workspace 挂载路径
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-select rebot_arm_hmi_bridge --symlink-install
+source install/setup.bash
+ros2 run rebot_arm_hmi_bridge hmi_bridge --ros-args \
+  -p can_interface:=can0 \
+  -p controller_manager:=/controller_manager \
+  -p controller_namespace:=/
+```
+
+参数 `controller_manager` 为 manager 节点完整名称，`controller_namespace` 为控制器节点所在命名空间，默认根命名空间。节点通过系统 SocketCAN 访问已配置的 1 Mbit/s 总线；不改接口、不重启硬件、不更改关节控制参数。桥接和 controller_manager 使用同一个 ROS_DOMAIN_ID。每条总线只能有一个桥接实例。
+
+| HMI 模式 | 活动控制器（底层 MIT 始终保留） |
+| --- | --- |
+| POSITION | `rebot_arm_rs_position_adapter`、`rebot_arm_rs_trajectory_controller` |
+| DAMPING | `rebot_arm_rs_damping_controller` |
+| IMPEDANCE | `rebot_arm_rs_impedance_controller`、`rebot_arm_rs_impedance_trajectory_controller` |
+
+切换使用 STRICT，停用已知旧组合，激活已配置目标组合，再调用 list_controllers 核对。joint_state_broadcaster 和夹爪不参与切换。未知占用六轴接口的控制器、混合/不完整组合会阻止切换；不会尝试替用户卸载或抢占。
+
+轨迹规则为 **先停止，再切换**：两个 JTC 的 FollowJointTrajectory action 处于 accepted/executing/canceling 时拒绝，不自动 cancel。活动 JTC 还需有新鲜状态和持续静止反馈。直接 `joint_trajectory` topic 无法可靠查询轨迹生命周期，发现其发布者时保守阻止切换；使用 HMI 切换模式时，请通过 action 提交轨迹，并停止直接 topic 发布者。其他 ROS 客户端须在切换期间暂停新 goal/模式切换，检查与服务调用之间不具备跨客户端原子性。
+
+线协议完整定义、字节示例、时限和结果码见 [arm_hmi_node README：ROS MODE 主站通信协议 v1](https://jihulab.com/robot_group/zephyr_embedding/arm_hmi_node/-/blob/main/README.md#ros-mode-主站通信协议-v1)。预留标准帧 `0x6F0` 请求、`0x6F1` 结果、`0x6F2` 心跳，DLC=8，32 位小端一次性 token。200 ms 心跳不包含电机控制命令；重复请求返回缓存结果，HMI 超时不自动重试。服务超时后桥接等待原 future 结束并重新查询，期间拒绝新切换，以免延迟执行导致二次操作。
+
+桥接心跳会使 HMI 本地 MASTER/TEACH 的 3 秒空闲检查失败；使用本地模式前先停止桥接和 PC 主站 CAN 发令。PC 桥接退出或 HMI 掉线都不会自动改变 ROS 控制器模式。
+
+只读排查：
+
+```bash
+ros2 control list_controllers
+candump can0,6F0:C00007FF,6F1:C00007FF,6F2:C00007FF
+```
+
+离线测试（不打开 SocketCAN、不接触实际控制器）：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+cd src/zephyr_common/rebot_arm_rs_ros2
+ROS_DOMAIN_ID=187 ROS_LOCALHOST_ONLY=1 \
+  PYTHONPATH="$PWD/rebot_arm_hmi_bridge:$PYTHONPATH" \
+  python3 -m pytest -q rebot_arm_hmi_bridge/test
+```
+
+测试仅在 ROS_DOMAIN_ID=187 运行服务集成测试，使用内存 CAN 传输、假 controller_manager 和假轨迹发布器；该测试域应保持专用。实板三模式切换与活动轨迹拒绝仍需烧录后验证。

@@ -97,17 +97,17 @@
     <joint name="joint2" type="revolute">
       <origin xyz="0.020343 0.027237 0.07" rpy="-1.5708 0 0"/>
       <parent link="link1"/><child link="link2"/><axis xyz="0 0 1"/>
-      <limit lower="0" upper="3.14" effort="36" velocity="50"/>
+      <limit lower="0" upper="3.63" effort="36" velocity="50"/>
     </joint>
     <joint name="joint3" type="revolute">
       <origin xyz="-0.236 0 0" rpy="0 0 0"/>
       <parent link="link2"/><child link="link3"/><axis xyz="0 0 -1"/>
-      <limit lower="0" upper="3.14" effort="36" velocity="50"/>
+      <limit lower="0" upper="4.23" effort="36" velocity="50"/>
     </joint>
     <joint name="joint4" type="revolute">
       <origin xyz="0.228 -0.072746 0.0045" rpy="0 0 0"/>
       <parent link="link3"/><child link="link4"/><axis xyz="0 0 -1"/>
-      <limit lower="-1.57" upper="1.57" effort="14" velocity="40"/>
+      <limit lower="-1.88" upper="1.60" effort="14" velocity="40"/>
     </joint>
     <joint name="joint5" type="revolute">
       <origin xyz="0.087 -0.048 -0.03075" rpy="-1.5708 0 0"/>

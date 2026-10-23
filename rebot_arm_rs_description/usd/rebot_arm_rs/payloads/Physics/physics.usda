@@ -248,8 +248,8 @@ over "rebot_arm_rs"
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (-0.70710546, 0.7071081, 0, 0)
             quatf physics:localRot1 = (1, 0, 0, 0)
-            float physics:lowerLimit = 0
-            float physics:upperLimit = 179.90875
+            float physics:lowerLimit = 0.00000000
+            float physics:upperLimit = 207.98367963
             custom float urdf:limit:effort = 36
             custom float urdf:limit:velocity = 50
         }
@@ -271,8 +271,8 @@ over "rebot_arm_rs"
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (1.048176e-17, -1, 0, 0)
             quatf physics:localRot1 = (0, -1, 0, 0)
-            float physics:lowerLimit = 0
-            float physics:upperLimit = 179.90875
+            float physics:lowerLimit = 0.00000000
+            float physics:upperLimit = 242.36114734
             custom float urdf:limit:effort = 36
             custom float urdf:limit:velocity = 50
         }
@@ -294,8 +294,8 @@ over "rebot_arm_rs"
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (1.048176e-17, -1, 0, 0)
             quatf physics:localRot1 = (0, -1, 0, 0)
-            float physics:lowerLimit = -89.95438
-            float physics:upperLimit = 89.95438
+            float physics:lowerLimit = -107.71606548
+            float physics:upperLimit = 91.67324722
             custom float urdf:limit:effort = 14
             custom float urdf:limit:velocity = 40
         }

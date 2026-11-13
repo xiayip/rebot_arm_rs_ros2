@@ -14,7 +14,7 @@ Studio's ROS 2 repository:
 - Synchronization date: 2026-08-21
 
 For `base_link` through `link5`, joint origins, axes, parent/child relationships, link inertial
-parameters, effort limits, position limits, URDF velocity limits, collision meshes, visual meshes,
+parameters, effort limits, position limits, URDF velocity limits, original collision meshes, visual meshes,
 material assignments, and palette RGBA values match the upstream model numerically. The upstream
 `link6` body, mesh, and inertial parameters are preserved numerically in the separate
 `rebot_arm_rs_stock_flange` macro. Its fixed attachment to the empty `link6` output frame is
@@ -69,3 +69,22 @@ visual material. The split meshes are therefore represented as zero-offset, fixe
 links. Each rendered link has exactly one visual and retains its own upstream material, while the
 physical six-axis macro contains only inertial, collision, and joint data plus the stable,
 massless `link6` output frame.
+
+## Lightweight arm collision meshes
+
+The six core links (`base_link`, `link1` through `link5`) now reference local
+`meshes/rebot_arm_rs/collision/*.STL` derivatives of the original Seeed meshes.
+Visual meshes, inertials, joint frames/limits, and controller interfaces stay
+unchanged. The original full-resolution collision files remain alongside the
+visual assets for provenance and verification.
+
+These are compound convex approximations generated with V-HACD (100,000 voxel
+resolution, up to 32 pieces, 32 seed vertices per piece). Each original surface
+triangle is assigned to one piece; its supporting planes and local bounding
+planes are expanded to contain that whole triangle with a nominal 0.1 mm margin.
+Coordinates are rounded to 0.1 micrometre before float32 STL export. Each shell's
+STL attribute stores a positive piece ID for the coverage regression test.
+
+Total triangles: 691,710 -> 24,906 (96.4% reduction). These conservative meshes
+can fill small holes/recesses and require more clearance than the dense CAD.
+Stock flange and gripper collision geometry are unaffected by this change.

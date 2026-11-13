@@ -14,7 +14,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/${mesh}"/>
+        <mesh filename="package://rebot_arm_rs_description/meshes/rebot_arm_rs/collision/${mesh}"/>
       </geometry>
     </collision>
   </xacro:macro>

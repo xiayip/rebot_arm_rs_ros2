@@ -196,3 +196,58 @@ def test_default_description_remains_without_official_gripper():
     assert 'gripper_end' not in link_names
     assert 'gripper_joint1' not in joint_names
     assert 'gripper_joint2' not in joint_names
+
+
+@pytest.mark.parametrize('name', ['base_link', 'link1', 'link2', 'link3', 'link4', 'link5'])
+def test_collision_mesh_preserves_original_surface(name):
+    import struct
+    import numpy as np
+
+    mesh_dir = DESCRIPTION_ROOT / 'meshes/rebot_arm_rs'
+
+    def read_stl(path):
+        data = path.read_bytes()
+        count = struct.unpack('<I', data[80:84])[0]
+        assert len(data) == 84 + 50 * count
+        return np.frombuffer(data, offset=84, count=count, dtype=np.dtype([
+            ('normal', '<f4', 3), ('vertices', '<f4', (3, 3)), ('part', '<u2')]))
+
+    original = read_stl(mesh_dir / (name + '.STL'))
+    reduced = read_stl(mesh_dir / 'collision' / (name + '.STL'))
+    assert 0 < len(reduced) < 6000
+    assert len(reduced) < len(original) / 5
+    remaining = original['vertices'].astype(float)
+    # Each disconnected convex shell carries a piece ID in the STL attribute.
+    # Every original triangle must fit entirely inside at least one shell.
+    for part_id in np.unique(reduced['part']):
+        assert part_id > 0
+        part = reduced[reduced['part'] == part_id]
+        triangles = part['vertices'].astype(float)
+        normals = np.cross(triangles[:, 1] - triangles[:, 0],
+                           triangles[:, 2] - triangles[:, 0])
+        lengths = np.linalg.norm(normals, axis=1)
+        assert np.all(lengths > 1e-18)
+        normals /= lengths[:, None]
+        assert np.all(np.sum(normals * part['normal'], axis=1) > .99)
+        offsets = np.sum(normals * triangles[:, 0], axis=1)
+        assert np.max(triangles.reshape(-1, 3) @ normals.T - offsets) < 1e-7
+        kept = []
+        for chunk in np.array_split(remaining, max(1, len(remaining) // 2048)):
+            if not len(chunk):
+                continue
+            distances = (chunk.reshape(-1, 3) @ normals.T - offsets).reshape(
+                len(chunk), 3, -1).max(axis=(1, 2))
+            kept.append(chunk[distances > -0.00005])
+        remaining = np.concatenate(kept) if kept else np.empty((0, 3, 3))
+    assert len(remaining) == 0
+
+
+def test_arm_uses_lightweight_collisions_and_original_visuals():
+    robot = expand_description('rebot_arm_rs.urdf.xacro', 'use_mock_hardware:=true')
+    prefix = 'package://rebot_arm_rs_description/meshes/rebot_arm_rs/'
+    for name in ['base_link', 'link1', 'link2', 'link3', 'link4', 'link5']:
+        collision = robot.find(f"link[@name='{name}']/collision/geometry/mesh")
+        assert collision.get('filename') == prefix + 'collision/' + name + '.STL'
+    visuals = robot.findall('.//visual/geometry/mesh')
+    assert visuals
+    assert all('/collision/' not in mesh.get('filename') for mesh in visuals)

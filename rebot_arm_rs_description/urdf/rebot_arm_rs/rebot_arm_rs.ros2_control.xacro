@@ -39,6 +39,8 @@
       <state_interface name="position"><param name="initial_value">0.0</param></state_interface>
       <state_interface name="velocity"><param name="initial_value">0.0</param></state_interface>
       <state_interface name="effort"><param name="initial_value">0.0</param></state_interface>
+      <!-- Unknown until feedback arrives; published by the standard dynamic joint broadcaster. -->
+      <state_interface name="temperature"><param name="initial_value">nan</param></state_interface>
     </joint>
   </xacro:macro>
 

@@ -1,4 +1,5 @@
 from pathlib import Path
+import math
 import subprocess
 import xml.etree.ElementTree as ET
 
@@ -35,6 +36,10 @@ def test_mit_interfaces(mock):
         params = {p.attrib['name']: p.text for p in joint.findall('param')}
         assert params['protocol_plugin'] == 'rebot_robstride_protocol/RobStrideProtocol'
         assert joint.find("command_interface[@name='position']/param[@name='initial_value']") is None
+        assert {i.attrib['name'] for i in joint.findall('state_interface')} == {
+            'position', 'velocity', 'effort', 'temperature'}
+        assert math.isnan(float(joint.findtext(
+            "state_interface[@name='temperature']/param[@name='initial_value']")))
 
 
 def test_isaac_description_uses_standard_topic_based_interfaces():

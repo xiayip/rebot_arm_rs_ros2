@@ -1,5 +1,4 @@
 from pathlib import Path
-import math
 import subprocess
 import xml.etree.ElementTree as ET
 
@@ -38,8 +37,10 @@ def test_mit_interfaces(mock):
         assert joint.find("command_interface[@name='position']/param[@name='initial_value']") is None
         assert {i.attrib['name'] for i in joint.findall('state_interface')} == {
             'position', 'velocity', 'effort', 'temperature'}
-        assert math.isnan(float(joint.findtext(
-            "state_interface[@name='temperature']/param[@name='initial_value']")))
+        # ros2_control defaults an omitted value to NaN, but rejects an explicit
+        # "nan" string while importing interfaces. Do not invent a 0 C reading.
+        assert joint.find(
+            "state_interface[@name='temperature']/param[@name='initial_value']") is None
 
 
 def test_isaac_description_uses_standard_topic_based_interfaces():
